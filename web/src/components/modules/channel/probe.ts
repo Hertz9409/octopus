@@ -2,17 +2,19 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { useTranslations } from 'use-intl';
 import { useFetchModel } from '@/api/channel';
-import { grantKey, toChannelConfig, type ChannelFormState } from './state';
+import { grantKey, toChannelConfig, toChannelDetail, type ChannelFormState } from './state';
+import { buildSyncedDetail } from './sync';
 
 // useModelProbe 按凭据探测上游模型列表, 供模型页与凭据页共用。
-// 两侧并发探测与协议位判定都在后端完成, 此处只负责转圈状态, 结果并入表单和结果提示。
+// 两侧并发探测与协议位判定都在后端完成, 此处只负责转圈状态, 并用探测结果整体替换模型与授权。
 export function useModelProbe() {
     const t = useTranslations('channel.form');
     const fetchModel = useFetchModel();
     const [pendingKey, setPendingKey] = useState<string | null>(null); // 正在探测的凭据名称, 只转动该行的图标。
 
-    // probe 探测指定凭据可用的模型, 结果并入模型集合与授权表。
-    // 上游未返回但本地已有的模型保留: 静默删除会打断正在使用该模型的路由。
+    // probe 探测指定凭据可用的模型, 结果只替换这一个凭据的模型与授权:
+    // 该凭据下上游已下线的模型随之移除, 其授权与引用它的分组成员由后端级联删除; 上游返回空列表则该凭据的模型清空。
+    // 其它凭据此时未被探测, 它们仍在引用的模型与授权原样保留, 不会被这一次探测连带删除。
     const probe = async (
         state: ChannelFormState,
         setState: (next: ChannelFormState) => void,
@@ -30,19 +32,25 @@ export function useModelProbe() {
                 channel: toChannelConfig(state),
                 key: channelKey.key.trim(),
             });
-            if (fetched.length === 0) {
+            const detail = toChannelDetail(state, 0);
+            // 只替换被探测凭据的模型与授权: 其它凭据仍在引用的模型先放进保留列表, 交给 buildSyncedDetail 原样留下。
+            const otherKeyModels = new Set(
+                detail.grants.filter((grant) => grant.key_name !== channelKey.name).map((grant) => grant.model_name),
+            );
+            const keepModels = detail.models.filter((name) => otherKeyModels.has(name));
+            const next = buildSyncedDetail(detail, [{ keyName: channelKey.name, models: fetched }], keepModels);
+            setState({
+                ...state,
+                models: next.models,
+                grants: new Map(next.grants.map((grant) => [grantKey(grant.model_name, grant.key_name), grant.protocols])),
+            });
+            if (next.models.length === 0) {
+                toast.warning(t('modelRefreshCleared'));
+            } else if (fetched.length === 0) {
                 toast.warning(t('modelRefreshEmpty'));
-                return;
+            } else {
+                toast.success(t('modelRefreshSuccess', { count: fetched.length }));
             }
-            const models = [...state.models];
-            const grants = new Map(state.grants);
-            for (const { name, protocols } of fetched) {
-                if (!models.includes(name)) models.push(name);
-                const mapKey = grantKey(name, channelKey.name);
-                grants.set(mapKey, (grants.get(mapKey) ?? 0) | protocols);
-            }
-            setState({ ...state, models, grants });
-            toast.success(t('modelRefreshSuccess', { count: fetched.length }));
         } catch (error) {
             toast.error(t('modelRefreshFailed'), { description: String(error) });
         } finally {

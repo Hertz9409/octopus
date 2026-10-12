@@ -186,6 +186,8 @@ function LogDetail({ log, now, errorRounds }: { log: RelayLogOverview; now: numb
     const requestActive = log.status === 'running' || responseCommitted;
     const showRounds = log.status === 'running' || (requestFailed && rounds.length > 0);
     const isWaitingForSelection = log.status === 'running' && !log.sending && activeGroup?.mode === 'manual' && activeGroup.runtime.current_item_id === 0; // isWaitingForSelection 表示手动模式请求正等待选择渠道。
+    // 只列出当前可用的成员: 渠道或凭据停用的成员转发时必然被跳过, 显示出来只会让人误以为能选中。
+    const visibleGroupItems = (activeGroup?.items ?? []).filter((item) => item.available);
 
     // 让弹窗先完成展开动画, 避免详情请求及其状态更新占用动画起步帧。
     useEffect(() => {
@@ -289,13 +291,13 @@ function LogDetail({ log, now, errorRounds }: { log: RelayLogOverview; now: numb
                                 <div className="flex h-full items-center justify-center px-4 text-xs text-muted-foreground">
                                     {t('groupUnavailable')}
                                 </div>
-                            ) : !activeGroup.items.length ? (
+                            ) : !visibleGroupItems.length ? (
                                 <div className="flex h-full items-center justify-center px-4 text-xs text-muted-foreground">
                                     {t('noGroupItems')}
                                 </div>
                             ) : (
                                 <div className="divide-y divide-border">
-                                    {activeGroup.items.map((item) => {
+                                    {visibleGroupItems.map((item) => {
                                         const { Icon: ItemIcon, className: itemIconClassName } = getModelIcon(item.model_name);
                                         const itemCurrent = switchingItemId !== null
                                             ? item.id === switchingItemId

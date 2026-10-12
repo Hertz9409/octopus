@@ -48,6 +48,7 @@
     },
     "toolbar": {
         "hideChannelName": "模糊渠道名稱",
+        "syncModels": "同步全部模型",
         "share": "分享",
         "popover": {
             "ariaLabel": "檢視選項",
@@ -432,6 +433,31 @@
                 "disabled": "供應源已停用"
             }
         },
+        "sync": {
+            "title": "同步全部模型",
+            "description": "逐個供應源拉取上游模型清單，並用拉取結果整體替換該供應源的模型與授權。",
+            "noticeScope": "範圍：全部 {count} 個供應源，含已停用供應源。",
+            "noticeReplace": "每個供應源按其已啟用且已填密鑰的憑證各拉取一次，結果整體替換原有模型清單。",
+            "noticeCascade": "上游已下線的模型會被移除，其授權以及引用它的分組成員會一併刪除。",
+            "noticeBackup": "建議先在設定頁匯出備份。沒有可用憑證或拉取失敗的供應源會跳過，模型清單保持不變。",
+            "empty": "還沒有供應源可以同步。",
+            "start": "開始同步",
+            "cancel": "取消",
+            "close": "關閉",
+            "running": "同步進行中，請勿關閉頁面。",
+            "progress": "已完成 {done} / {total} 個供應源",
+            "summary": "同步完成：{success} 個成功 · {partial} 個部分成功 · {failed} 個失敗 · {skipped} 個跳過",
+            "statusSuccess": "成功",
+            "statusPartial": "部分成功",
+            "statusFailed": "失敗",
+            "statusSkipped": "跳過",
+            "reasonNoKey": "沒有已啟用且已填密鑰的憑證，未拉取",
+            "reasonProbeFailed": "全部憑證拉取失敗，保留原模型",
+            "reasonSaveFailed": "拉取成功但儲存失敗，保留原模型",
+            "reasonLoadFailed": "讀取供應源設定失敗",
+            "counts": "新增 {added} 個 · 移除 {removed} 個",
+            "countsPartial": "新增 {added} 個 · 移除 {removed} 個 · {failed} 個憑證失敗"
+        },
         "stats": {
             "totalRequests": "總請求",
             "totalToken": "總詞元",
@@ -474,6 +500,7 @@
             "modelRefreshSuccess": "已拉取 {count} 個模型",
             "modelRefreshFailed": "拉取失敗",
             "modelRefreshEmpty": "未取得模型",
+            "modelRefreshCleared": "上游未回傳模型，已清空模型清單",
             "channelProxy": "通道代理",
             "matchRegex": "匹配正則",
             "paramOverride": "參數覆寫",

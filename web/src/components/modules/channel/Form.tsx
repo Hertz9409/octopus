@@ -66,14 +66,14 @@ function ChannelFormFields({ channel, onBack }: { channel?: ChannelDetail; onBac
     // 新建与编辑弹窗可同时存在, 控件 id 需按渠道隔离。
     const idPrefix = channel ? `channel-${channel.id}` : 'new-channel';
 
-    // 后端会拒的四项在此先挡: 名称与地址非空, 路径以 / 开头, 至少一份填了 Key 的凭据, 至少一个模型。
+    // 后端会拒的四项在此先挡: 名称与地址非空, 路径以 / 开头, 至少一份凭据且每份都填了 Key。
+    // 模型可以不选: 渠道允许先建好, 之后再用拉取或同步补齐模型。
     const canSubmit = state.name.trim() !== ''
         && state.base_url.trim() !== ''
         && [state.openai_chat_completion_path, state.openai_response_path, state.anthropic_message_path]
             .every((path) => path === '' || path.startsWith('/'))
         && state.keys.length > 0
-        && state.keys.every((k) => k.key.trim() !== '')
-        && state.models.length > 0;
+        && state.keys.every((k) => k.key.trim() !== '');
 
     const steps: { id: StepID; label: string }[] = [
         ...(channel ? [] : [{ id: 'preset' as StepID, label: t('stepPreset') }]),

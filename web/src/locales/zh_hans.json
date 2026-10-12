@@ -48,6 +48,7 @@
     },
     "toolbar": {
         "hideChannelName": "模糊渠道名称",
+        "syncModels": "同步全部模型",
         "share": "分享",
         "popover": {
             "ariaLabel": "视图选项",
@@ -432,6 +433,31 @@
                 "disabled": "渠道已禁用"
             }
         },
+        "sync": {
+            "title": "同步全部模型",
+            "description": "逐个渠道拉取上游模型列表，并用拉取结果整体替换该渠道的模型与授权。",
+            "noticeScope": "范围：全部 {count} 个渠道，含已停用渠道。",
+            "noticeReplace": "每个渠道按其启用且已填密钥的凭据各拉取一次，结果整体替换原有模型列表。",
+            "noticeCascade": "上游已下线的模型会被移除，其授权以及引用它的分组成员会一并删除。",
+            "noticeBackup": "建议先在设置页导出备份。没有可用凭据或拉取失败的渠道会跳过，模型列表保持不变。",
+            "empty": "还没有渠道可以同步。",
+            "start": "开始同步",
+            "cancel": "取消",
+            "close": "关闭",
+            "running": "同步进行中，请勿关闭页面。",
+            "progress": "已完成 {done} / {total} 个渠道",
+            "summary": "同步完成：{success} 个成功 · {partial} 个部分成功 · {failed} 个失败 · {skipped} 个跳过",
+            "statusSuccess": "成功",
+            "statusPartial": "部分成功",
+            "statusFailed": "失败",
+            "statusSkipped": "跳过",
+            "reasonNoKey": "没有启用且已填密钥的凭据，未拉取",
+            "reasonProbeFailed": "全部凭据拉取失败，保留原模型",
+            "reasonSaveFailed": "拉取成功但保存失败，保留原模型",
+            "reasonLoadFailed": "读取渠道配置失败",
+            "counts": "新增 {added} 个 · 移除 {removed} 个",
+            "countsPartial": "新增 {added} 个 · 移除 {removed} 个 · {failed} 个凭据失败"
+        },
         "stats": {
             "totalRequests": "总请求",
             "totalToken": "总词元",
@@ -474,6 +500,7 @@
             "modelRefreshSuccess": "已拉取 {count} 个模型",
             "modelRefreshFailed": "拉取失败",
             "modelRefreshEmpty": "未获取到模型",
+            "modelRefreshCleared": "上游未返回模型，已清空模型列表",
             "channelProxy": "渠道代理",
             "matchRegex": "匹配正则",
             "paramOverride": "参数覆盖",

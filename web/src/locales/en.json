@@ -48,6 +48,7 @@
     },
     "toolbar": {
         "hideChannelName": "Blur channel names",
+        "syncModels": "Sync all models",
         "share": "Share",
         "popover": {
             "ariaLabel": "View options",
@@ -432,6 +433,31 @@
                 "disabled": "Channel disabled"
             }
         },
+        "sync": {
+            "title": "Sync all models",
+            "description": "Fetch every channel's upstream model list and replace that channel's models and grants with the result.",
+            "noticeScope": "Scope: all {count} channels, including disabled ones.",
+            "noticeReplace": "Each channel is fetched once per enabled credential that has a key; the result replaces its whole model list.",
+            "noticeCascade": "Models no longer offered upstream are removed, along with their grants and any group members referencing them.",
+            "noticeBackup": "Export a backup from Settings first. Channels without a usable credential, or whose fetch fails, are skipped and keep their models.",
+            "empty": "No channels to sync yet.",
+            "start": "Start sync",
+            "cancel": "Cancel",
+            "close": "Close",
+            "running": "Syncing, keep this page open.",
+            "progress": "{done} / {total} channels done",
+            "summary": "Finished: {success} succeeded · {partial} partly succeeded · {failed} failed · {skipped} skipped",
+            "statusSuccess": "Succeeded",
+            "statusPartial": "Partly succeeded",
+            "statusFailed": "Failed",
+            "statusSkipped": "Skipped",
+            "reasonNoKey": "No enabled credential with a key; not fetched",
+            "reasonProbeFailed": "Every credential failed to fetch; models kept",
+            "reasonSaveFailed": "Fetched but failed to save; models kept",
+            "reasonLoadFailed": "Failed to load channel configuration",
+            "counts": "{added} added · {removed} removed",
+            "countsPartial": "{added} added · {removed} removed · {failed} credentials failed"
+        },
         "stats": {
             "totalRequests": "Total Requests",
             "totalToken": "Total Tokens",
@@ -474,6 +500,7 @@
             "modelRefreshSuccess": "Fetched {count} models",
             "modelRefreshFailed": "Fetch failed",
             "modelRefreshEmpty": "No models returned",
+            "modelRefreshCleared": "Upstream returned no models; model list cleared",
             "channelProxy": "Channel proxy",
             "matchRegex": "Match regex",
             "paramOverride": "Param override",

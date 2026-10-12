@@ -6,6 +6,7 @@ import { PageActions, usePageActionsStore } from '@/components/common/PageAction
 import { MorphingDialogDescription } from '@/components/ui/morphing-dialog';
 import { Card } from './Card';
 import { ChannelForm } from './Form';
+import { SyncAll } from './SyncAll';
 import { VirtualizedGrid } from '@/components/common/VirtualizedGrid';
 
 // ChannelActions 向稳定顶栏提供渠道页面的搜索、视图选项和创建入口。
@@ -43,6 +44,7 @@ export function ChannelActions() {
             onFilterChange={(value) => {
                 if (value === 'all' || value === 'enabled' || value === 'disabled') setFilter(value);
             }}
+            actions={<SyncAll />}
         >
             <div className="w-screen max-w-full md:max-w-3xl flex flex-col">
                 <MorphingDialogDescription disableLayoutAnimation>
