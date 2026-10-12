@@ -14,6 +14,7 @@ import (
 	"github.com/bestruirui/octopus/internal/server/resp"
 	"github.com/bestruirui/octopus/internal/server/router"
 	"github.com/bestruirui/octopus/internal/task"
+	"github.com/charmbracelet/log"
 	"github.com/gin-gonic/gin"
 )
 
@@ -69,7 +70,18 @@ func setSetting(c *gin.Context) {
 			resp.Error(c, http.StatusBadRequest, err.Error())
 			return
 		}
-		task.Update(string(setting.Key), time.Duration(hours)*time.Hour)
+		if !task.Update(string(setting.Key), time.Duration(hours)*time.Hour) {
+			log.Errorf("task %s not rescheduled, the new interval applies after restart", setting.Key)
+		}
+	case model.SettingKeyStatsSaveInterval:
+		minutes, err := strconv.Atoi(setting.Value)
+		if err != nil {
+			resp.Error(c, http.StatusBadRequest, err.Error())
+			return
+		}
+		if !task.Update(string(setting.Key), time.Duration(minutes)*time.Minute) {
+			log.Errorf("task %s not rescheduled, the new interval applies after restart", setting.Key)
+		}
 	}
 	resp.Success(c, setting)
 }

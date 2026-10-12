@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { snapdom } from '@zumer/snapdom';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 import { useTranslations } from 'use-intl';
 import { type ChannelStatsFormatted, useDeleteChannel } from '@/api/channel';
 import { type StatsMetricsFormatted } from '@/api/stats';
@@ -313,15 +314,18 @@ export function ChannelStats({ channel, onEdit }: {
                     </div>
 
                     {/* 宽屏下五项等分右列剩余高度, 与左列同为 grid 等分; 窄屏按内容取高。
-                        行数固定为 5 而不是随模型数变化: 不足 5 个时行高仍按五等分, 两列的卡片高度才一致;
-                        超出的模型不显示, 这里是排行摘要而非完整列表。 */}
+                        不足 5 个时行高仍按五等分, 两列的卡片高度才一致;
+                        超过 5 个时改为等高行并在列内滚动, 排行榜之外的模型也能看到。 */}
                     {modelStats.length === 0 ? (
                         <div className="flex items-center justify-center rounded-2xl border bg-card p-6 text-center text-xs text-muted-foreground @2xl/stats:flex-1">
                             {t('noModels')}
                         </div>
                     ) : (
-                        <ul className="grid gap-2 @2xl/stats:flex-1 @2xl/stats:grid-rows-5">
-                            {modelStats.slice(0, 5).map((model) => (
+                        <ul className={cn(
+                            'grid gap-2 overflow-y-auto @2xl/stats:flex-1',
+                            modelStats.length <= 5 ? '@2xl/stats:grid-rows-5' : '@2xl/stats:auto-rows-[minmax(3rem,auto)]',
+                        )}>
+                            {modelStats.map((model) => (
                                 <li
                                     key={model.id}
                                     className="grid gap-2 rounded-2xl border bg-card p-3 @md/stats:grid-cols-[minmax(0,1fr)_auto] @md/stats:items-center @md/stats:gap-4"

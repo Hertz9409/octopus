@@ -76,14 +76,31 @@
                     "free": "未配置价格"
                 }
             }
-        }
+        },
+        "create": "新建"
     },
     "common": {
         "copy": {
             "success": "复制成功",
             "failed": "复制失败",
             "noContent": "无可复制内容"
-        }
+        },
+        "loading": "加载中...",
+        "loadFailed": "加载失败",
+        "requestFailed": "请求失败，请稍后重试",
+        "retry": "重试",
+        "sessionExpired": "登录状态已失效，请重新登录",
+        "reload": "重新加载",
+        "crashTitle": "界面出错了",
+        "crashDescription": "页面渲染失败，可以重试或重新加载。",
+        "chunkFailedTitle": "页面资源加载失败",
+        "chunkFailedDescription": "通常是前端已更新，重新加载即可。",
+        "updateReady": "新版本已就绪",
+        "initTimeoutTitle": "初始数据加载超时",
+        "initTimeoutDescription": "可以重试，或先进入应用（各页面会自行显示错误）。",
+        "enterAnyway": "先进入应用",
+        "reconnecting": "实时连接已断开，正在重连…",
+        "cancel": "取消"
     },
     "home": {
         "metric": {
@@ -170,7 +187,8 @@
             "export": {
                 "button": "导出",
                 "exporting": "导出中...",
-                "success": "开始导出"
+                "success": "开始导出",
+                "failed": "导出失败"
             },
             "import": {
                 "title": "导入",
@@ -179,7 +197,10 @@
                 "noFile": "请先选择 JSON 文件",
                 "success": "导入成功",
                 "failed": "导入失败",
-                "result": "导入结果"
+                "result": "导入结果",
+                "confirmTitle": "确认导入备份？",
+                "confirmDescription": "将用「{name}」覆盖当前全部数据，且无法撤销。建议先导出当前备份。",
+                "confirmButton": "覆盖导入"
             }
         },
         "apiKey": {
@@ -222,7 +243,12 @@
                 "updateError": "API 密钥更新失败",
                 "deleteSuccess": "API 密钥删除成功",
                 "deleteError": "API 密钥删除失败"
-            }
+            },
+            "created": {
+                "title": "API Key 已创建",
+                "description": "密钥只在创建时显示这一次，请立即复制保存。"
+            },
+            "expand": "放大面板"
         },
         "llmPrice": {
             "title": "模型价格",
@@ -308,7 +334,8 @@
             "createFailed": "创建失败",
             "updated": "更新成功",
             "updateFailed": "更新失败",
-            "deleted": "删除成功"
+            "deleted": "删除成功",
+            "activatedCleared": "已取消指定成员，分组重新按优先级选择"
         },
         "create": {
             "submit": "创建",
@@ -318,7 +345,8 @@
             "empty": "暂无规则",
             "activate": "设为活动项",
             "cooling": "冷却 {seconds}s",
-            "affinity": "亲和 {seconds}s"
+            "affinity": "亲和 {seconds}s",
+            "emptyList": "还没有分组"
         },
         "detail": {
             "actions": {
@@ -351,7 +379,8 @@
             "addItem": "添加模型",
             "autoAdd": "自动添加",
             "clear": "清空"
-        }
+        },
+        "memberUnavailable": "该成员的渠道或凭据已停用"
     },
     "model": {
         "create": {
@@ -362,19 +391,23 @@
             "cacheWrite": "缓存写入",
             "cancel": "取消",
             "submit": "创建",
-            "submitting": "创建中..."
+            "submitting": "创建中...",
+            "nameRequired": "请填写模型名称",
+            "invalidPrice": "价格必须是不小于 0 的数字"
         },
         "toast": {
             "updated": "模型价格已更新",
             "updateFailed": "更新失败",
             "deleted": "模型已删除",
-            "deleteFailed": "删除失败"
+            "deleteFailed": "删除失败",
+            "invalidPrice": "价格需要填写不小于 0 的数字"
         },
         "card": {
             "inputCache": "输入/缓存",
             "outputCache": "输出/缓存",
             "edit": "编辑",
-            "delete": "删除"
+            "delete": "删除",
+            "emptyList": "还没有模型"
         },
         "overlay": {
             "cancel": "取消",
@@ -390,7 +423,8 @@
     "log": {
         "list": {
             "empty": "暂无日志",
-            "disconnected": "日志连接已断开，正在重连"
+            "disconnected": "日志连接已断开，正在重连",
+            "reconnect": "重新连接"
         },
         "status": {
             "committed": "响应中"
@@ -425,13 +459,15 @@
         "card": {
             "requestCount": "请求次数",
             "totalCost": "总成本",
+            "keyCount": "凭据",
             "model": "模型",
             "successRequests": "成功请求",
             "failedRequests": "失败请求",
             "toast": {
                 "enabled": "渠道已启用",
                 "disabled": "渠道已禁用"
-            }
+            },
+            "emptyList": "还没有渠道"
         },
         "sync": {
             "title": "同步全部模型",
@@ -516,7 +552,18 @@
             "backToStats": "返回统计",
             "grantClearAll": "清空全部模型",
             "modelRemove": "移除模型",
-            "grantRemove": "移除该凭据的授权"
+            "grantRemove": "移除该凭据的授权",
+            "requireName": "请填写渠道名称",
+            "requireBaseUrl": "请填写接口地址",
+            "requirePath": "接口路径必须以 / 开头",
+            "requireKey": "至少添加一份凭据并填写 Key",
+            "paramOverrideInvalid": "JSON 格式不正确，需要是对象",
+            "discardTitle": "放弃未保存的修改？",
+            "discardDescription": "关闭后本次编辑的改动不会保存。",
+            "discardConfirm": "放弃修改",
+            "clearAllModelsTitle": "清空全部模型？",
+            "clearAllModelsDescription": "将删除 {count} 个模型及其全部授权，保存后生效。",
+            "clearAllModelsConfirm": "清空模型"
         }
     }
 }

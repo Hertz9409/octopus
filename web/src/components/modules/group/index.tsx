@@ -1,11 +1,13 @@
-import { useMemo } from 'react';
+import { useMemo, useSyncExternalStore } from 'react';
 import { ArrowUpAZ } from 'lucide-react';
 import { useTranslations } from 'use-intl';
 import { GroupCard } from './Card';
 import { CreateDialogContent } from './Create';
 import { useRuntimeClock } from './MemberStatus';
-import { useGroupList } from '@/api/group';
+import { getGroupEventStatus, subscribeGroupEventStatus, useGroupList } from '@/api/group';
+import { errorMessage } from '@/api/client';
 import { PageActions, usePageActionsStore } from '@/components/common/PageActions';
+import { ListState } from '@/components/common/ListState';
 import { VirtualizedGrid } from '@/components/common/VirtualizedGrid';
 
 // GroupActions 向稳定顶栏提供分组页面的搜索、视图选项和创建入口。
@@ -47,7 +49,10 @@ export function GroupActions() {
 
 // Group 渲染分组列表正文。
 export function Group() {
-    const { data: groups } = useGroupList(true, true);
+    const t = useTranslations('group');
+    const tCommon = useTranslations('common');
+    const { data: groups, isPending, isError, error, refetch } = useGroupList(true, true);
+    const eventStatus = useSyncExternalStore(subscribeGroupEventStatus, getGroupEventStatus, getGroupEventStatus);
     const runtimeNow = useRuntimeClock(groups);
     const searchTerm = usePageActionsStore((state) => state.searchTerms.group || '');
     const sortOrder = usePageActionsStore((state) => state.sortOrders.group === 'desc' ? 'desc' : 'asc');
@@ -71,18 +76,36 @@ export function Group() {
     }, [sortedGroups, searchTerm, filter]);
 
     return (
-        <VirtualizedGrid
-            items={visibleGroups}
-            columns={{ default: 1, md: 2, lg: 3 }}
-            estimateItemHeight={520}
-            getItemKey={(group) => group.id}
-            renderItem={(group) => {
-                let deadline = group.runtime.affinity_until;
-                for (const cooldownUntil of Object.values(group.runtime.cooldowns)) {
-                    deadline = Math.max(deadline, cooldownUntil);
-                }
-                return <GroupCard group={group} now={deadline > runtimeNow ? runtimeNow : deadline} />;
-            }}
-        />
+        <div className="flex h-full min-h-0 flex-col">
+            {eventStatus === 'closed' && (
+                <div className="flex shrink-0 items-center justify-center px-1 pb-3 text-xs text-muted-foreground">
+                    <span>{tCommon('reconnecting')}</span>
+                </div>
+            )}
+            <div className="min-h-0 flex-1">
+                <VirtualizedGrid
+                    items={visibleGroups}
+                    columns={{ default: 1, md: 2, lg: 3 }}
+                    estimateItemHeight={520}
+                    getItemKey={(group) => group.id}
+                    emptyState={
+                        isPending ? (
+                            <ListState kind="loading" />
+                        ) : isError ? (
+                            <ListState kind="error" errorDescription={errorMessage(error)} onRetry={() => void refetch()} />
+                        ) : (
+                            <ListState kind="empty" emptyText={t('card.emptyList')} />
+                        )
+                    }
+                    renderItem={(group) => {
+                        let deadline = group.runtime.affinity_until;
+                        for (const cooldownUntil of Object.values(group.runtime.cooldowns)) {
+                            deadline = Math.max(deadline, cooldownUntil);
+                        }
+                        return <GroupCard group={group} now={deadline > runtimeNow ? runtimeNow : deadline} />;
+                    }}
+                />
+            </div>
+        </div>
     );
 }

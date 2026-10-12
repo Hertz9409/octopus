@@ -2,7 +2,9 @@ import { useMemo } from 'react';
 import { ArrowUpAZ } from 'lucide-react';
 import { useTranslations } from 'use-intl';
 import { useModelList } from '@/api/model';
+import { errorMessage } from '@/api/client';
 import { PageActions, usePageActionsStore } from '@/components/common/PageActions';
+import { ListState } from '@/components/common/ListState';
 import { ModelItem } from './Item';
 import { CreateDialogContent } from './Create';
 import { VirtualizedGrid } from '@/components/common/VirtualizedGrid';
@@ -50,7 +52,8 @@ export function ModelActions() {
 
 // Model 渲染模型列表正文。
 export function Model() {
-    const { data: models } = useModelList();
+    const t = useTranslations('model');
+    const { data: models, isPending, isError, error, refetch } = useModelList();
     const searchTerm = usePageActionsStore((state) => state.searchTerms.model || '');
     const layout = usePageActionsStore((state) => state.layouts.model || 'grid');
     const sortOrder = usePageActionsStore((state) => state.sortOrders.model === 'desc' ? 'desc' : 'asc');
@@ -86,6 +89,15 @@ export function Model() {
             columns={{ default: 1, md: 2, lg: 3 }}
             estimateItemHeight={112}
             getItemKey={(model) => `model-${model.name}`}
+            emptyState={
+                isPending ? (
+                    <ListState kind="loading" />
+                ) : isError ? (
+                    <ListState kind="error" errorDescription={errorMessage(error)} onRetry={() => void refetch()} />
+                ) : (
+                    <ListState kind="empty" emptyText={t('card.emptyList')} />
+                )
+            }
             renderItem={(model) => <ModelItem model={model} layout={layout} />}
         />
     );

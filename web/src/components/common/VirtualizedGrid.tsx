@@ -29,6 +29,8 @@ interface VirtualizedGridProps<T> {
     getItemKey: (item: T, index: number) => string | number;
     renderItem: (item: T, index: number) => ReactNode;
     footer?: ReactNode;
+    /** 列表为空时展示的内容；为空则只渲染空容器。 */
+    emptyState?: ReactNode;
     onReachEnd?: () => void;
     reachEndEnabled?: boolean;
     reachEndOffset?: number;
@@ -56,6 +58,7 @@ export function VirtualizedGrid<T>({
     getItemKey,
     renderItem,
     footer = null,
+    emptyState = null,
     onReachEnd,
     reachEndEnabled = false,
     reachEndOffset = 1,
@@ -151,7 +154,9 @@ export function VirtualizedGrid<T>({
                 ref={containerRef}
                 className="relative h-full w-full overflow-y-auto overscroll-contain rounded-t-3xl"
             >
-                {rowCount === 0 ? null : (
+                {rowCount === 0 ? (
+                    emptyState ? <div className="flex h-full items-center justify-center p-6">{emptyState}</div> : null
+                ) : (
                     <div className="relative w-full" style={{ height: `${rowVirtualizer.getTotalSize()}px` }}>
                         {virtualRows.map((virtualRow) => {
                             if (hasFooterRow && virtualRow.index === itemRowCount) {
@@ -207,6 +212,8 @@ export function VirtualizedGrid<T>({
                         })}
                     </div>
                 )}
+                {/* 移动端底部导航是固定定位，列表末尾留出可滚动空间避免最后一张卡片被压住。 */}
+                <div aria-hidden="true" className="h-24 shrink-0 md:h-0" />
             </div>
         </div>
     );

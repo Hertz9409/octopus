@@ -12,6 +12,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { IconButton } from '@/components/common/IconButton';
+import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { useModelProbe } from './probe';
 import { grantKey, type ChannelFormState } from './state';
 
@@ -95,6 +96,8 @@ export function FormGrants({ state, setState }: {
     const [expanded, setExpanded] = useState<Set<string>>(new Set()); // 已展开的模型名, 支持同时展开多个。
     const [adding, setAdding] = useState('');
     const [selectedKey, setSelectedKey] = useState('');
+    // 清空会同时删掉全部模型与其授权, 先确认再执行。
+    const [confirmClear, setConfirmClear] = useState(false);
 
     const keyNames = state.keys.map((k) => k.name);
     const activeKey = selectedKey || keyNames[0] || '';
@@ -112,6 +115,8 @@ export function FormGrants({ state, setState }: {
         for (const keyName of keyNames) grants.delete(grantKey(modelName, keyName));
         setState({ ...state, models: state.models.filter((m) => m !== modelName), grants });
     };
+
+    const clearAllModels = () => setState({ ...state, models: [], grants: new Map() });
 
     // 自定义模型直接授权给当前选中的凭据, 协议位沿用该凭据在其他模型上已有的并集。
     // 并集来自此前刷新探测出的结果, 即该凭据确实讲得通的协议; 该凭据尚无任何授权时退回 Responses,
@@ -191,7 +196,7 @@ export function FormGrants({ state, setState }: {
                     <GrantCells
                         state={state} setState={setState}
                         models={state.models} keyNames={keyNames}
-                        remove={() => setState({ ...state, models: [], grants: new Map() })}
+                        remove={() => setConfirmClear(true)}
                         icon={Eraser}
                         tip={t('grantClearAll')}
                     />
@@ -256,6 +261,20 @@ export function FormGrants({ state, setState }: {
                     })}
                 </div>
             </div>
+
+            {/* 清空会同时删掉全部模型与其授权, 且没有撤销。 */}
+            <ConfirmDialog
+                open={confirmClear}
+                onOpenChange={setConfirmClear}
+                title={t('clearAllModelsTitle')}
+                description={t('clearAllModelsDescription', { count: state.models.length })}
+                confirmLabel={t('clearAllModelsConfirm')}
+                destructive
+                onConfirm={() => {
+                    clearAllModels();
+                    setConfirmClear(false);
+                }}
+            />
         </div>
     );
 }

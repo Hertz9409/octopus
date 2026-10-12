@@ -98,6 +98,8 @@ async function downloadBlob(blob: Blob, filename: string) {
  */
 export function useExportDB() {
     return useMutation({
+        // 调用方自行捕获并提示错误，声明关闭全局兜底提示避免重复。
+        meta: { errorToast: false },
         mutationFn: async () => {
             const res = await fetch('./api/v1/setting/export', {
                 method: 'GET',
@@ -122,6 +124,8 @@ export function useExportDB() {
  */
 export function useImportDB() {
     return useMutation({
+        // 调用方自行捕获并提示错误，声明关闭全局兜底提示避免重复。
+        meta: { errorToast: false },
         mutationFn: async (file: File) => {
             const form = new FormData();
             form.append('file', file);

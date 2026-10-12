@@ -82,12 +82,13 @@ export type ChannelModelStats = StatsMetrics & {
 };
 
 // ChannelStats 是单个渠道及其模型的累计统计，自带名称与启停状态。
-// 这一份同时充当渠道列表项：列表页要展示的名称、启停与模型个数（即 models.length）都在此，
+// 这一份同时充当渠道列表项：列表页要展示的名称、启停、凭据个数与模型个数（即 models.length）都在此，
 // 故没有单独的渠道概览接口，整份配置在点开编辑时由 useChannelDetail 单独取。
 export type ChannelStats = StatsMetrics & {
     channel_id: number;
     channel_name: string;
     enabled: boolean;
+    key_count: number;
     models: ChannelModelStats[];
 };
 
@@ -99,12 +100,13 @@ export type ChannelModelStatsFormatted = {
 };
 
 // ChannelStatsFormatted 是单个渠道及其模型的展示用统计，同时充当渠道列表项。
-// 名称与启停随统计一并给出，列表页由此只消费这一条查询：模型个数即 models.length，
+// 名称与启停随统计一并给出，列表页由此只消费这一条查询：凭据个数与模型个数（models.length）都在此，
 // 整份配置在点开编辑时由 useChannelDetail 单独取。
 export type ChannelStatsFormatted = {
     channel_id: number;
     channel_name: string;
     enabled: boolean;
+    key_count: number;
     models: ChannelModelStatsFormatted[];
     formatted: StatsMetricsFormatted;
 };
@@ -146,6 +148,7 @@ const channelStatsFormattedQueryOptions = queryOptions({
         channel_id: item.channel_id,
         channel_name: item.channel_name,
         enabled: item.enabled,
+        key_count: item.key_count,
         models: item.models.map((channelModel) => ({
             model_id: channelModel.model_id,
             model_name: channelModel.model_name,
@@ -199,6 +202,8 @@ export function useCreateChannel() {
     const queryClient = useQueryClient();
 
     return useMutation({
+        // 调用方在 mutate 时自行提示错误，声明关闭全局兜底提示避免重复。
+        meta: { errorToast: false },
         mutationFn: (data: ChannelDetail) =>
             apiRequest<ChannelDetail>('/api/v1/channel/create', { method: 'POST', body: data }),
         onSuccess: () => {
@@ -267,6 +272,8 @@ export function useEnableChannel() {
     const queryClient = useQueryClient();
 
     return useMutation({
+        // 调用方在 mutate 时自行提示错误，声明关闭全局兜底提示避免重复。
+        meta: { errorToast: false },
         mutationFn: (data: { id: number; enabled: boolean }) =>
             apiRequest<null>('/api/v1/channel/enable', { method: 'POST', body: data }),
         onSuccess: () => {
@@ -293,6 +300,8 @@ export function useEnableChannel() {
  */
 export function useFetchModel() {
     return useMutation({
+        // 调用方自行捕获并提示错误，声明关闭全局兜底提示避免重复。
+        meta: { errorToast: false },
         mutationFn: (data: FetchModelRequest) =>
             apiRequest<FetchModel[]>('/api/v1/channel/fetch-model', { method: 'POST', body: data }),
     });

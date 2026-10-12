@@ -56,6 +56,8 @@ export function useUpdateModel() {
     const queryClient = useQueryClient();
 
     return useMutation({
+        // 调用方在 mutate 时自行提示错误，声明关闭全局兜底提示避免重复。
+        meta: { errorToast: false },
         mutationFn: (data: LLMInfo) =>
             apiRequest<LLMInfo>('/api/v1/model/update', { method: 'POST', body: data }),
         onSuccess: () => queryClient.invalidateQueries({ queryKey: modelListQueryOptions.queryKey }),
@@ -98,6 +100,8 @@ export function useDeleteModel() {
     const queryClient = useQueryClient();
 
     return useMutation({
+        // 调用方在 mutate 时自行提示错误，声明关闭全局兜底提示避免重复。
+        meta: { errorToast: false },
         mutationFn: (name: string) =>
             apiRequest<null>('/api/v1/model/delete', { method: 'POST', body: { name } }),
         onSuccess: () => queryClient.invalidateQueries({ queryKey: modelListQueryOptions.queryKey }),
@@ -116,6 +120,8 @@ export function useUpdateModelPrice() {
     const queryClient = useQueryClient();
 
     return useMutation({
+        // 调用方在 mutate 时自行提示错误，声明关闭全局兜底提示避免重复。
+        meta: { errorToast: false },
         mutationFn: () => apiRequest<null>('/api/v1/model/update-price', { method: 'POST', body: {} }),
         onSuccess: () => queryClient.invalidateQueries({ queryKey: ['models', 'last-update-time'] }),
     });
@@ -128,6 +134,8 @@ export function useRebuildModelPrice() {
     const queryClient = useQueryClient();
 
     return useMutation({
+        // 调用方在 mutate 时自行提示错误，声明关闭全局兜底提示避免重复。
+        meta: { errorToast: false },
         mutationFn: () => apiRequest<{ count: number }>('/api/v1/model/rebuild-price', { method: 'POST', body: {} }),
         onSuccess: () => queryClient.invalidateQueries({ queryKey: modelListQueryOptions.queryKey }),
     });

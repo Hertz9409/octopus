@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ChevronLeft, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTranslations } from 'use-intl';
@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { FormGrants } from './FormGrants';
 import { FormKeys } from './FormKeys';
 import { IconButton } from '@/components/common/IconButton';
@@ -68,12 +69,57 @@ function ChannelFormFields({ channel, onBack }: { channel?: ChannelDetail; onBac
 
     // 后端会拒的四项在此先挡: 名称与地址非空, 路径以 / 开头, 至少一份凭据且每份都填了 Key。
     // 模型可以不选: 渠道允许先建好, 之后再用拉取或同步补齐模型。
+    const paramOverrideError = useMemo(() => {
+        const raw = state.param_override.trim();
+        if (raw === '') return null;
+        try {
+            const parsed: unknown = JSON.parse(raw);
+            if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+                return t('paramOverrideInvalid');
+            }
+            return null;
+        } catch {
+            return t('paramOverrideInvalid');
+        }
+    }, [state.param_override, t]);
+
     const canSubmit = state.name.trim() !== ''
         && state.base_url.trim() !== ''
         && [state.openai_chat_completion_path, state.openai_response_path, state.anthropic_message_path]
             .every((path) => path === '' || path.startsWith('/'))
         && state.keys.length > 0
-        && state.keys.every((k) => k.key.trim() !== '');
+        && state.keys.every((k) => k.key.trim() !== '')
+        && paramOverrideError === null;
+
+    // 保存键置灰时说明还差哪一项, 否则只能看到一个点不动的按钮。
+    const unmet = [
+        state.name.trim() === '' ? t('requireName') : null,
+        state.base_url.trim() === '' ? t('requireBaseUrl') : null,
+        [state.openai_chat_completion_path, state.openai_response_path, state.anthropic_message_path]
+            .every((path) => path === '' || path.startsWith('/')) ? null : t('requirePath'),
+        state.keys.length === 0 || !state.keys.every((k) => k.key.trim() !== '') ? t('requireKey') : null,
+        paramOverrideError,
+    ].filter((item): item is string => item !== null);
+
+    // 弹窗在 Esc 时无条件关闭, 有未保存改动时先确认再关。
+    const [initialDetail] = useState(() => JSON.stringify(toChannelDetail(state, channel?.id ?? 0)));
+    const isDirty = useMemo(
+        () => JSON.stringify(toChannelDetail(state, channel?.id ?? 0)) !== initialDetail,
+        [state, channel, initialDetail],
+    );
+    const [isDiscardOpen, setIsDiscardOpen] = useState(false);
+
+    useEffect(() => {
+        if (!isDirty) return;
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.key !== 'Escape' || isDiscardOpen) return;
+            // 捕获阶段拦住对话框自身的 Esc 关闭, 换成确认弹窗。
+            event.stopPropagation();
+            setIsDiscardOpen(true);
+        };
+        window.addEventListener('keydown', handleKeyDown, true);
+        return () => window.removeEventListener('keydown', handleKeyDown, true);
+    }, [isDirty, isDiscardOpen]);
 
     const steps: { id: StepID; label: string }[] = [
         ...(channel ? [] : [{ id: 'preset' as StepID, label: t('stepPreset') }]),
@@ -242,8 +288,12 @@ function ChannelFormFields({ channel, onBack }: { channel?: ChannelDetail; onBac
                                     id={`${idPrefix}-param-override`}
                                     value={state.param_override}
                                     onChange={(e) => setState({ ...state, param_override: e.target.value })}
-                                    className="min-h-24 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                    aria-invalid={paramOverrideError !== null}
+                                    className="min-h-24 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring aria-invalid:border-destructive"
                                 />
+                                {paramOverrideError ? (
+                                    <p className="text-xs text-destructive">{paramOverrideError}</p>
+                                ) : null}
                             </div>
 
                             <div className="space-y-2">
@@ -299,20 +349,38 @@ function ChannelFormFields({ channel, onBack }: { channel?: ChannelDetail; onBac
                     )}
                 </div>
 
-                <div className="shrink-0 flex justify-end gap-2 pt-4">
-                    <Button
-                        type="button"
-                        variant="secondary"
-                        onClick={() => setIsOpen(false)}
-                        className="rounded-xl h-9 px-4"
-                    >
-                        {t('cancel')}
-                    </Button>
-                    <Button type="submit" disabled={isPending || !canSubmit} className="rounded-xl h-9 px-4">
-                        {channel ? t('save') : t('submit')}
-                    </Button>
+                <div className="shrink-0 flex items-center justify-between gap-3 pt-4">
+                    <p className="truncate text-xs text-muted-foreground">{unmet[0] ?? ''}</p>
+                    <div className="flex gap-2">
+                        <Button
+                            type="button"
+                            variant="secondary"
+                            onClick={() => (isDirty ? setIsDiscardOpen(true) : setIsOpen(false))}
+                            className="rounded-xl h-9 px-4"
+                        >
+                            {t('cancel')}
+                        </Button>
+                        <Button
+                            type="submit"
+                            disabled={isPending || !canSubmit}
+                            title={unmet[0]}
+                            className="rounded-xl h-9 px-4"
+                        >
+                            {channel ? t('save') : t('submit')}
+                        </Button>
+                    </div>
                 </div>
             </div>
+
+            <ConfirmDialog
+                open={isDiscardOpen}
+                onOpenChange={setIsDiscardOpen}
+                title={t('discardTitle')}
+                description={t('discardDescription')}
+                confirmLabel={t('discardConfirm')}
+                destructive
+                onConfirm={() => setIsOpen(false)}
+            />
         </form>
     );
 }

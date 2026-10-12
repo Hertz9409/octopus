@@ -61,6 +61,8 @@ export function useUpdateCore() {
     const queryClient = useQueryClient();
 
     return useMutation({
+        // 调用方在 mutate 时自行提示错误，声明关闭全局兜底提示避免重复。
+        meta: { errorToast: false },
         mutationFn: () => apiRequest<string>('/api/v1/update', { method: 'POST' }),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['update', 'latest'] });

@@ -51,6 +51,14 @@ export function SettingSystem() {
     const handleSave = (key: string, value: string, initialValue: string) => {
         if (value === initialValue) return;
 
+        // 保存失败时把输入恢复到已生效的值，避免界面显示未生效的配置。
+        const revert = () => {
+            if (key === SettingKey.ProxyURL) setProxyUrl(initialProxyUrl.current);
+            else if (key === SettingKey.StatsSaveInterval) setStatsSaveInterval(initialStatsSaveInterval.current);
+            else if (key === SettingKey.CORSAllowOrigins) setCorsAllowOrigins(initialCorsAllowOrigins.current);
+            else if (key === SettingKey.ModelFilter) setModelFilter(initialModelFilter.current);
+        };
+
         setSetting.mutate({ key, value }, {
             onSuccess: () => {
                 toast.success(t('saved'));
@@ -63,7 +71,8 @@ export function SettingSystem() {
                 } else if (key === SettingKey.ModelFilter) {
                     initialModelFilter.current = value;
                 }
-            }
+            },
+            onError: revert,
         });
     };
 

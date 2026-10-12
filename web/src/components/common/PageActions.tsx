@@ -1,4 +1,4 @@
-import { useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { LucideIcon } from 'lucide-react';
@@ -13,6 +13,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { FOCUS_SEARCH_EVENT } from '@/lib/shortcuts';
 
 interface PageActionOption {
     value: string; // 操作选项的稳定标识。
@@ -111,6 +112,16 @@ export function PageActions({
     const t = useTranslations('toolbar');
     const [searchExpanded, setSearchExpanded] = useState(false);
     const searchInputRef = useRef<HTMLInputElement>(null);
+
+    // `/` 快捷键请求聚焦搜索: 展开后在下一帧聚焦输入框。
+    useEffect(() => {
+        const handleFocusSearch = () => {
+            setSearchExpanded(true);
+            window.requestAnimationFrame(() => searchInputRef.current?.focus());
+        };
+        window.addEventListener(FOCUS_SEARCH_EVENT, handleFocusSearch);
+        return () => window.removeEventListener(FOCUS_SEARCH_EVENT, handleFocusSearch);
+    }, []);
 
     return (
         <div className="flex items-center gap-2">
@@ -266,7 +277,10 @@ export function PageActions({
 
             {/* 创建按钮 */}
             <MorphingDialog>
-                <MorphingDialogTrigger className={buttonVariants({ variant: 'ghost', size: 'icon', className: 'rounded-xl transition-none hover:bg-transparent text-muted-foreground hover:text-foreground' })}>
+                <MorphingDialogTrigger
+                    label={t('create')}
+                    className={buttonVariants({ variant: 'ghost', size: 'icon', className: 'rounded-xl transition-none hover:bg-transparent text-muted-foreground hover:text-foreground' })}
+                >
                     <Plus className="size-4 transition-colors duration-300" />
                 </MorphingDialogTrigger>
                 <MorphingDialogContainer>

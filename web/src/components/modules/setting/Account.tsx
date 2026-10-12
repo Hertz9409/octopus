@@ -4,6 +4,7 @@ import { User, KeyRound, Lock, Eye, EyeOff, Pencil, Check, X, Loader } from 'luc
 import { motion, AnimatePresence } from 'motion/react';
 import { Input } from '@/components/ui/input';
 import { useChangeUsername, useChangePassword, useAuth } from '@/api/user';
+import { errorMessage } from '@/api/client';
 import { toast } from 'sonner';
 
 /** 密码输入框，附带显示/隐藏切换 */
@@ -64,7 +65,7 @@ function UsernameForm({ onClose }: { onClose: () => void }) {
                     onClose();
                     setTimeout(() => logout(), 1000);
                 },
-                onError: () => toast.error(t('account.username.failed')),
+                onError: (error) => toast.error(t('account.username.failed'), { description: errorMessage(error) }),
             }
         );
     };
@@ -144,7 +145,7 @@ function PasswordForm({ onClose }: { onClose: () => void }) {
                     onClose();
                     setTimeout(() => logout(), 1000);
                 },
-                onError: () => toast.error(t('account.password.failed')),
+                onError: (error) => toast.error(t('account.password.failed'), { description: errorMessage(error) }),
             }
         );
     };

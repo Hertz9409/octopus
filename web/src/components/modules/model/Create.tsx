@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { toast } from 'sonner';
 import { useCreateModel } from '@/api/model';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -24,14 +25,27 @@ export function CreateDialogContent() {
 
     const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
-        if (!formData.name.trim()) return;
+        if (!formData.name.trim()) {
+            toast.error(t('nameRequired'));
+            return;
+        }
+
+        // 价格留空或不合法时不能静默按 0 建模型。
+        const fields = ['input', 'output', 'cache_read', 'cache_write'] as const;
+        const prices: Record<typeof fields[number], number> = { input: 0, output: 0, cache_read: 0, cache_write: 0 };
+        for (const field of fields) {
+            const raw = formData[field].trim();
+            const value = Number(raw);
+            if (raw === '' || !Number.isFinite(value) || value < 0) {
+                toast.error(t('invalidPrice'));
+                return;
+            }
+            prices[field] = value;
+        }
 
         createModel.mutate({
             name: formData.name.trim(),
-            input: parseFloat(formData.input) || 0,
-            output: parseFloat(formData.output) || 0,
-            cache_read: parseFloat(formData.cache_read) || 0,
-            cache_write: parseFloat(formData.cache_write) || 0,
+            ...prices,
         }, {
             onSuccess: () => {
                 setFormData({ name: '', input: '', output: '', cache_read: '', cache_write: '' });

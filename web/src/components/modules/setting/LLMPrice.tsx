@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useSettingList, useSetSetting, SettingKey } from '@/api/setting';
 import { useRebuildModelPrice, useUpdateModelPrice, useLastUpdateTime } from '@/api/model';
+import { errorMessage } from '@/api/client';
 import { toast } from 'sonner';
 
 export function SettingLLMPrice() {
@@ -44,7 +45,9 @@ export function SettingLLMPrice() {
             onSuccess: () => {
                 toast.success(t('saved'));
                 initialUpdateInterval.current = value;
-            }
+            },
+            // 保存失败恢复已生效的值，避免界面停在未生效的输入上。
+            onError: () => setUpdateInterval(initialUpdateInterval.current),
         });
     };
 
@@ -53,8 +56,8 @@ export function SettingLLMPrice() {
             onSuccess: () => {
                 toast.success(t('llmPrice.updateSuccess'));
             },
-            onError: () => {
-                toast.error(t('llmPrice.updateFailed'));
+            onError: (error) => {
+                toast.error(t('llmPrice.updateFailed'), { description: errorMessage(error) });
             }
         });
     };
@@ -67,10 +70,10 @@ export function SettingLLMPrice() {
                 setRebuildCountdown(0);
                 toast.success(t('llmPrice.rebuild.success', { count }));
             },
-            onError: () => {
+            onError: (error) => {
                 setConfirmRebuild(false);
                 setRebuildCountdown(0);
-                toast.error(t('llmPrice.rebuild.failed'));
+                toast.error(t('llmPrice.rebuild.failed'), { description: errorMessage(error) });
             }
         });
     };

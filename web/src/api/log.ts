@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { apiRequest } from './client';
 
 // RequestState 表示 Relay 请求的实时状态。
@@ -45,6 +45,8 @@ export interface RelayLogOverview {
 // useClearLogs 清空已完成的内存日志。
 export function useClearLogs() {
     return useMutation({
+        // 调用方在 mutate 时自行提示错误，声明关闭全局兜底提示避免重复。
+        meta: { errorToast: false },
         mutationFn: () => apiRequest<null>('/api/v1/log/clear', { method: 'DELETE' }),
     });
 }
@@ -52,6 +54,8 @@ export function useClearLogs() {
 // useStopRequest 按是否提供轮次参数, 中止单个轮次或整个请求。
 export function useStopRequest() {
     return useMutation({
+        // 调用方自行捕获并提示错误，声明关闭全局兜底提示避免重复。
+        meta: { errorToast: false },
         mutationFn: ({ requestId, round }: { requestId: number; round?: number }) =>
             apiRequest<null>(`/api/v1/log/stop/${requestId}${round === undefined ? '' : `/${round}`}`, { method: 'POST' }),
     });
@@ -62,6 +66,7 @@ export function useLogs() {
     const [logs, setLogs] = useState<RelayLogOverview[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<Error | null>(null);
+    const [retryToken, setRetryToken] = useState(0);
 
     useEffect(() => {
         const source = new EventSource('./api/v1/log/overview/stream', { withCredentials: true });
@@ -102,9 +107,16 @@ export function useLogs() {
         return () => {
             source.close();
         };
+    }, [retryToken]);
+
+    // retry 手动重建连接：EventSource 自身会重连，这里用于服务端长时间不可达后立即重试。
+    const retry = useCallback(() => {
+        setError(null);
+        setIsLoading(true);
+        setRetryToken((token) => token + 1);
     }, []);
 
-    return { logs, isLoading, error };
+    return { logs, isLoading, error, retry };
 }
 
 // useLogRequestBody 在调用方启用时按需获取指定日志的请求体。

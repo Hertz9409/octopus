@@ -1,7 +1,23 @@
-import { QueryClient } from '@tanstack/react-query';
+import { MutationCache, QueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
+import { translate } from '@/lib/i18n';
+
+// errorMessage 提取可展示的错误文案，网络异常等非 Error 值回退到通用提示。
+export function errorMessage(error: unknown): string {
+    if (error instanceof Error && error.message) return error.message;
+    return translate('common.requestFailed');
+}
 
 // queryClient 管理整个前端应用共享的查询缓存和请求状态。
+// mutation 未自行处理错误时统一弹提示，避免保存失败后界面毫无反馈。
+// 调用方若在 mutate 时传了 onError，需要在对应 hook 上声明 meta.errorToast = false 以避免重复提示。
 export const queryClient = new QueryClient({
+    mutationCache: new MutationCache({
+        onError: (error, _variables, _context, mutation) => {
+            if (mutation.options.onError || mutation.meta?.errorToast === false) return;
+            toast.error(errorMessage(error));
+        },
+    }),
     defaultOptions: {
         queries: {
             staleTime: 60 * 1000,
@@ -52,7 +68,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
         if (response.status === 401 && options.dispatchUnauthorized !== false && typeof window !== 'undefined') {
             window.dispatchEvent(new Event(apiUnauthorizedEvent));
         }
-        throw new ApiError(response.status, data?.message || `Request failed: ${response.status}`);
+        throw new ApiError(response.status, data?.message || `${translate('common.requestFailed')} (${response.status})`);
     }
     return data?.data as T;
 }

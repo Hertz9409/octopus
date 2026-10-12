@@ -86,12 +86,21 @@ export const ModelItem = memo(function ModelItem({ model, layout = 'grid' }: Mod
     };
 
     const handleSaveEdit = () => {
+        // 价格字段允许填 0（免费模型），但空白或不合法不能静默当成 0 存下去。
+        const fields = ['input', 'output', 'cache_read', 'cache_write'] as const;
+        const prices: Record<typeof fields[number], number> = { input: 0, output: 0, cache_read: 0, cache_write: 0 };
+        for (const field of fields) {
+            const raw = editValues[field].trim();
+            const value = Number(raw);
+            if (raw === '' || !Number.isFinite(value) || value < 0) {
+                toast.error(t('toast.invalidPrice'));
+                return;
+            }
+            prices[field] = value;
+        }
         updateModel.mutate({
             name: model.name,
-            input: parseFloat(editValues.input) || 0,
-            output: parseFloat(editValues.output) || 0,
-            cache_read: parseFloat(editValues.cache_read) || 0,
-            cache_write: parseFloat(editValues.cache_write) || 0,
+            ...prices,
         }, {
             onSuccess: () => {
                 closeEdit();

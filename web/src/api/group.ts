@@ -124,6 +124,31 @@ export function useGroup(id: number | undefined, enabled = true, eventsEnabled =
 let groupEventSource: EventSource | null = null;
 let groupEventRefCount = 0; // 当前订阅该连接的组件数量，归零时关闭连接。
 
+// GroupEventStatus 表示共享事件连接的连接状态。
+export type GroupEventStatus = 'connecting' | 'open' | 'closed';
+let groupEventStatus: GroupEventStatus = 'closed';
+const groupEventStatusListeners = new Set<() => void>();
+
+function publishGroupEventStatus(next: GroupEventStatus) {
+    if (groupEventStatus === next) return;
+    groupEventStatus = next;
+    for (const listener of groupEventStatusListeners) listener();
+}
+
+// subscribeGroupEventStatus 订阅连接状态变化，供 useSyncExternalStore 使用。
+export function subscribeGroupEventStatus(listener: () => void) {
+    groupEventStatusListeners.add(listener);
+
+    return () => {
+        groupEventStatusListeners.delete(listener);
+    };
+}
+
+// getGroupEventStatus 读取当前连接状态。
+export function getGroupEventStatus(): GroupEventStatus {
+    return groupEventStatus;
+}
+
 // useGroupEventStream 订阅分组的变更事件与运行状态增量，并写回列表与详情两处缓存。
 function useGroupEventStream(enabled: boolean) {
     useEffect(() => {
@@ -131,6 +156,7 @@ function useGroupEventStream(enabled: boolean) {
 
         groupEventRefCount++;
         if (!groupEventSource) {
+            publishGroupEventStatus('connecting');
             const source = new EventSource('./api/v1/group/events', { withCredentials: true });
             groupEventSource = source;
             source.addEventListener('changed', (event) => {
@@ -152,8 +178,13 @@ function useGroupEventStream(enabled: boolean) {
             // 拉取放在 onopen 而非 onerror: EventSource 自行重连，onerror 在每次失败时都会触发，
             // 写在那里会让断网期间反复全量重拉。
             source.onopen = () => {
+                publishGroupEventStatus('open');
                 queryClient.invalidateQueries({ queryKey: groupListQueryOptions.queryKey });
                 queryClient.invalidateQueries({ queryKey: ['groups', 'detail'] });
+            };
+            // EventSource 会自行重连，这里只把状态标记为断开供页面提示。
+            source.onerror = () => {
+                publishGroupEventStatus('closed');
             };
         }
 
@@ -162,6 +193,7 @@ function useGroupEventStream(enabled: boolean) {
             if (groupEventRefCount > 0) return;
             groupEventSource?.close();
             groupEventSource = null;
+            publishGroupEventStatus('closed');
         };
     }, [enabled]);
 }
@@ -169,6 +201,8 @@ function useGroupEventStream(enabled: boolean) {
 // useCreateGroup 创建分组。
 export function useCreateGroup() {
     return useMutation({
+        // 调用方在 mutate 时自行提示错误，声明关闭全局兜底提示避免重复。
+        meta: { errorToast: false },
         mutationFn: (data: GroupCreateRequest) =>
             apiRequest<Group>('/api/v1/group/create', { method: 'POST', body: data }),
         onSuccess: writeGroupCache,
@@ -178,6 +212,8 @@ export function useCreateGroup() {
 // useUpdateGroup 更新分组配置、成员或当前成员，响应即变更后的完整分组。
 export function useUpdateGroup() {
     return useMutation({
+        // 所有调用方都在 mutate 时自行提示错误，声明关闭全局兜底提示避免重复。
+        meta: { errorToast: false },
         mutationFn: ({ id, ...data }: GroupUpdateRequest & { id: number }) =>
             apiRequest<Group>(`/api/v1/group/update/${id}`, { method: 'POST', body: data }),
         onSuccess: writeGroupCache,

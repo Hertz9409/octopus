@@ -1,16 +1,21 @@
 import type { CSSProperties, ReactNode } from 'react';
-import { useRef, useState } from 'react';
+import { useDeferredValue, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
-import { AnimatePresence, motion } from 'motion/react';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useTranslations } from 'use-intl';
 import Logo from '@/components/modules/logo';
 import { NAV_ITEMS, useAppStore } from '@/stores/app';
 import { preloadPage } from '@/lib/page-preload';
+import { usePageShortcuts } from '@/lib/use-page-shortcuts';
 import { cn } from '@/lib/utils';
 
 // AppShell 作为普通用户界面的稳定布局层，统一渲染导航、顶栏和页面内容。
 export function AppShell({ children, actions }: { children: ReactNode; actions?: ReactNode }) {
+    usePageShortcuts();
     const currentPage = useAppStore((state) => state.currentPage);
+    // 标题与正文取同一个延迟值, 换页时标题不会先跳到新页面名。
+    const visiblePage = useDeferredValue(currentPage);
+    const prefersReducedMotion = useReducedMotion() ?? false;
     const direction = useAppStore((state) => state.direction);
     const setCurrentPage = useAppStore((state) => state.setCurrentPage);
     const t = useTranslations('navbar');
@@ -101,7 +106,7 @@ export function AppShell({ children, actions }: { children: ReactNode; actions?:
                 <div className="min-w-0 flex-1 overflow-hidden">
                     <AnimatePresence mode="wait" custom={direction}>
                         <motion.div
-                            key={currentPage}
+                            key={visiblePage}
                             custom={direction}
                             variants={{
                                 initial: (value: number) => ({ y: 32 * value, opacity: 0 }),
@@ -111,11 +116,11 @@ export function AppShell({ children, actions }: { children: ReactNode; actions?:
                             initial="initial"
                             animate="animate"
                             exit="exit"
-                            transition={{ duration: 0.3 }}
+                            transition={{ duration: prefersReducedMotion ? 0 : 0.3 }}
                             className="flex items-center"
                         >
                             <span className="mt-1 truncate text-3xl font-bold">
-                                {t(currentPage)}
+                                {t(visiblePage)}
                             </span>
                         </motion.div>
                     </AnimatePresence>

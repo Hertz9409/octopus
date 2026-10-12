@@ -76,14 +76,31 @@
                     "free": "未配置價格"
                 }
             }
-        }
+        },
+        "create": "新增"
     },
     "common": {
         "copy": {
             "success": "複製成功",
             "failed": "複製失敗",
             "noContent": "無可複製內容"
-        }
+        },
+        "loading": "載入中...",
+        "loadFailed": "載入失敗",
+        "requestFailed": "請求失敗，請稍後重試",
+        "retry": "重試",
+        "sessionExpired": "登入狀態已失效，請重新登入",
+        "reload": "重新載入",
+        "crashTitle": "介面發生錯誤",
+        "crashDescription": "頁面渲染失敗，可以重試或重新載入。",
+        "chunkFailedTitle": "頁面資源載入失敗",
+        "chunkFailedDescription": "通常是前端已更新，重新載入即可。",
+        "updateReady": "新版本已就緒",
+        "initTimeoutTitle": "初始資料載入逾時",
+        "initTimeoutDescription": "可以重試，或先進入應用程式（各頁面會自行顯示錯誤）。",
+        "enterAnyway": "先進入應用程式",
+        "reconnecting": "即時連線已中斷，正在重新連線…",
+        "cancel": "取消"
     },
     "home": {
         "metric": {
@@ -170,7 +187,8 @@
             "export": {
                 "button": "匯出",
                 "exporting": "匯出中...",
-                "success": "開始匯出"
+                "success": "開始匯出",
+                "failed": "匯出失敗"
             },
             "import": {
                 "title": "匯入",
@@ -179,7 +197,10 @@
                 "noFile": "請先選擇 JSON 檔案",
                 "success": "匯入成功",
                 "failed": "匯入失敗",
-                "result": "匯入結果"
+                "result": "匯入結果",
+                "confirmTitle": "確認匯入備份？",
+                "confirmDescription": "將用「{name}」覆蓋目前全部資料，且無法復原。建議先匯出目前備份。",
+                "confirmButton": "覆蓋匯入"
             }
         },
         "apiKey": {
@@ -222,7 +243,12 @@
                 "updateError": "API 金鑰更新失敗",
                 "deleteSuccess": "API 金鑰刪除成功",
                 "deleteError": "API 金鑰刪除失敗"
-            }
+            },
+            "created": {
+                "title": "API Key 已建立",
+                "description": "金鑰只在建立時顯示這一次，請立即複製保存。"
+            },
+            "expand": "放大面板"
         },
         "llmPrice": {
             "title": "模型價格",
@@ -308,7 +334,8 @@
             "createFailed": "建立失敗",
             "updated": "更新成功",
             "updateFailed": "更新失敗",
-            "deleted": "刪除成功"
+            "deleted": "刪除成功",
+            "activatedCleared": "已取消指定成員，分組重新依優先順序選擇"
         },
         "create": {
             "submit": "建立",
@@ -318,7 +345,8 @@
             "empty": "暫無規則",
             "activate": "設為活動項",
             "cooling": "冷卻 {seconds}s",
-            "affinity": "親和 {seconds}s"
+            "affinity": "親和 {seconds}s",
+            "emptyList": "還沒有分組"
         },
         "detail": {
             "actions": {
@@ -351,7 +379,8 @@
             "addItem": "新增模型",
             "autoAdd": "自動新增",
             "clear": "清空"
-        }
+        },
+        "memberUnavailable": "該成員的供應源或憑證已停用"
     },
     "model": {
         "create": {
@@ -362,19 +391,23 @@
             "cacheWrite": "快取寫入",
             "cancel": "取消",
             "submit": "建立",
-            "submitting": "建立中..."
+            "submitting": "建立中...",
+            "nameRequired": "請填寫模型名稱",
+            "invalidPrice": "價格必須是不小於 0 的數字"
         },
         "toast": {
             "updated": "模型價格已更新",
             "updateFailed": "更新失敗",
             "deleted": "模型已刪除",
-            "deleteFailed": "刪除失敗"
+            "deleteFailed": "刪除失敗",
+            "invalidPrice": "價格需填寫不小於 0 的數字"
         },
         "card": {
             "inputCache": "輸入/快取",
             "outputCache": "輸出/快取",
             "edit": "編輯",
-            "delete": "刪除"
+            "delete": "刪除",
+            "emptyList": "還沒有模型"
         },
         "overlay": {
             "cancel": "取消",
@@ -390,7 +423,8 @@
     "log": {
         "list": {
             "empty": "暫無日誌",
-            "disconnected": "日誌連線已中斷，正在重新連線"
+            "disconnected": "日誌連線已中斷，正在重新連線",
+            "reconnect": "重新連線"
         },
         "status": {
             "committed": "回應中"
@@ -425,13 +459,15 @@
         "card": {
             "requestCount": "請求次數",
             "totalCost": "總成本",
+            "keyCount": "憑證",
             "model": "模型",
             "successRequests": "成功請求",
             "failedRequests": "失敗請求",
             "toast": {
                 "enabled": "供應源已啟用",
                 "disabled": "供應源已停用"
-            }
+            },
+            "emptyList": "還沒有供應源"
         },
         "sync": {
             "title": "同步全部模型",
@@ -516,7 +552,18 @@
             "backToStats": "返回統計",
             "grantClearAll": "清空全部模型",
             "modelRemove": "移除模型",
-            "grantRemove": "移除該憑據的授權"
+            "grantRemove": "移除該憑據的授權",
+            "requireName": "請填寫供應源名稱",
+            "requireBaseUrl": "請填寫介面位址",
+            "requirePath": "介面路徑必須以 / 開頭",
+            "requireKey": "至少新增一份憑證並填寫 Key",
+            "paramOverrideInvalid": "JSON 格式不正確，必須是物件",
+            "discardTitle": "放棄未儲存的修改？",
+            "discardDescription": "關閉後本次編輯的變更不會儲存。",
+            "discardConfirm": "放棄修改",
+            "clearAllModelsTitle": "清空全部模型？",
+            "clearAllModelsDescription": "將刪除 {count} 個模型及其全部授權，儲存後生效。",
+            "clearAllModelsConfirm": "清空模型"
         }
     }
 }

@@ -98,16 +98,19 @@ function MemberItem({
                 'flex items-center gap-2 rounded-lg bg-background px-2.5 py-2 select-none transition-[background-color,opacity] duration-200 relative overflow-hidden',
                 isRemoving && 'opacity-0',
                 isDisabled && 'opacity-60 grayscale',
-                onActivate && member.item_id !== undefined && 'cursor-pointer'
+                onActivate && member.item_id !== undefined && !isDisabled && 'cursor-pointer'
             )}
-                onClick={() => member.item_id !== undefined && onActivate?.(member.item_id)}
+                // 不可用成员不能被设为当前成员: 转发时后端也会把它剔除。
+                onClick={() => !isDisabled && member.item_id !== undefined && onActivate?.(member.item_id)}
+                // 置灰只说明「不可用」, 补一句原因, 否则只能猜是渠道还是凭据停了。
+                title={isDisabled ? t('memberUnavailable') : undefined}
                 onKeyDown={(event) => {
-                    if (event.target !== event.currentTarget || member.item_id === undefined || !onActivate || (event.key !== 'Enter' && event.key !== ' ')) return;
+                    if (isDisabled || event.target !== event.currentTarget || member.item_id === undefined || !onActivate || (event.key !== 'Enter' && event.key !== ' ')) return;
                     event.preventDefault();
                     onActivate(member.item_id);
                 }}
-                role={onActivate && member.item_id !== undefined ? 'button' : undefined}
-                tabIndex={onActivate && member.item_id !== undefined ? 0 : undefined}
+                role={onActivate && !isDisabled && member.item_id !== undefined ? 'button' : undefined}
+                tabIndex={onActivate && !isDisabled && member.item_id !== undefined ? 0 : undefined}
             >
                 <div
                     className={cn(

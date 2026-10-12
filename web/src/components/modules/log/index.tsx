@@ -1,13 +1,14 @@
 import { Loader2, Logs } from 'lucide-react';
 import { useTranslations } from 'use-intl';
 import { useLogs } from '@/api/log';
+import { Button } from '@/components/ui/button';
 import { VirtualizedGrid } from '@/components/common/VirtualizedGrid';
 import { LogCard } from './Item';
 
 // Log 展示进程内日志概览，并按 RequestID 实时更新卡片。
 export function Log() {
     const t = useTranslations('log');
-    const { logs, isLoading, error } = useLogs();
+    const { logs, isLoading, error, retry } = useLogs();
 
     if (isLoading) {
         return (
@@ -22,6 +23,11 @@ export function Log() {
             <div className="flex h-full flex-col items-center justify-center gap-3 text-muted-foreground">
                 {!error && <Logs className="size-8" />}
                 <span className="text-sm">{error ? t('list.disconnected') : t('list.empty')}</span>
+                {error && (
+                    <Button type="button" variant="outline" size="sm" onClick={retry}>
+                        {t('list.reconnect')}
+                    </Button>
+                )}
             </div>
         );
     }
@@ -29,8 +35,11 @@ export function Log() {
     return (
         <div className="flex h-full min-h-0 flex-col gap-3">
             {error && (
-                <div className="flex shrink-0 items-center justify-center px-1 pb-3 text-xs text-destructive">
+                <div className="flex shrink-0 items-center justify-center gap-2 px-1 pb-3 text-xs text-destructive">
                     <span>{t('list.disconnected')}</span>
+                    <Button type="button" variant="outline" size="sm" onClick={retry}>
+                        {t('list.reconnect')}
+                    </Button>
                 </div>
             )}
             <div className="min-h-0 flex-1">

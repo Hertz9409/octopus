@@ -35,6 +35,15 @@ func DefaultSettings() []Setting {
 
 func (s *Setting) Validate() error {
 	switch s.Key {
+	case SettingKeyStatsSaveInterval:
+		minutes, err := strconv.Atoi(s.Value)
+		if err != nil {
+			return fmt.Errorf("stats save interval must be an integer")
+		}
+		if minutes <= 0 {
+			return fmt.Errorf("stats save interval must be greater than 0")
+		}
+		return nil
 	case SettingKeyModelInfoUpdateInterval:
 		_, err := strconv.Atoi(s.Value)
 		if err != nil {

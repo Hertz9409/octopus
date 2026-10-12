@@ -43,6 +43,10 @@ func ChannelStatsList() []model.ChannelStats {
 			StatsMetrics: channelModel.StatsMetrics,
 		})
 	}
+	keysByChannel := make(map[int]int, channelCache.Len())
+	for _, channelKey := range channelKeyCache.GetAll() {
+		keysByChannel[channelKey.ChannelID]++
+	}
 	stats := make([]model.ChannelStats, 0, channelCache.Len())
 	for _, channel := range channelCache.GetAll() {
 		models := modelsByChannel[channel.ID]
@@ -53,6 +57,7 @@ func ChannelStatsList() []model.ChannelStats {
 			ChannelID:    channel.ID,
 			ChannelName:  channel.Name,
 			Enabled:      channel.Enabled,
+			KeyCount:     keysByChannel[channel.ID],
 			Models:       models,
 			StatsMetrics: channel.StatsMetrics,
 		})

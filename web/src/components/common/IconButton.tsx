@@ -12,9 +12,11 @@ export function IconButton({ tip, asChild, className, ...props }: ComponentProps
     asChild?: boolean; // 由子元素出标签, 用于承载 motion 元素或自带按钮的组件。
 }) {
     const Comp = asChild ? Slot.Root : 'button';
+    // 图标按钮没有可读文本, 有 tip 就借它当可访问名; 调用方显式给的 aria-label 优先。
     const button = (
         <Comp
             type={asChild ? undefined : 'button'}
+            aria-label={props['aria-label'] ?? tip}
             className={cn(
                 'inline-flex items-center justify-center text-muted-foreground transition-colors hover:text-foreground disabled:pointer-events-none disabled:opacity-50',
                 className,

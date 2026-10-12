@@ -1,6 +1,7 @@
 import { ScrollText, Trash2 } from 'lucide-react';
 import { useTranslations } from 'use-intl';
 import { useClearLogs } from '@/api/log';
+import { errorMessage } from '@/api/client';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 
@@ -12,7 +13,7 @@ export function SettingLog() {
     const handleClearLogs = () => {
         clearLogs.mutate(undefined, {
             onSuccess: () => toast.success(t('log.clearSuccess')),
-            onError: () => toast.error(t('log.clearFailed')),
+            onError: (error) => toast.error(t('log.clearFailed'), { description: errorMessage(error) }),
         });
     };
 

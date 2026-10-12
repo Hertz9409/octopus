@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from 'react';
 import { useTranslations } from 'use-intl';
 import { Database, Download, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { useExportDB, useImportDB } from '@/api/setting';
@@ -41,6 +42,9 @@ export function SettingBackup() {
             toast.error(e instanceof Error ? e.message : t('backup.import.failed'));
         }
     };
+
+    // 导入会覆盖现有数据，选中文件后先确认再执行。
+    const [confirmOpen, setConfirmOpen] = useState(false);
 
     const onExport = async () => {
         try {
@@ -90,12 +94,22 @@ export function SettingBackup() {
                     type="button"
                     variant="destructive"
                     className="w-full rounded-xl"
-                    onClick={onImport}
+                    onClick={() => (file ? setConfirmOpen(true) : void onImport())}
                     disabled={importDB.isPending}
                 >
                     <Upload className="size-4" />
                     {importDB.isPending ? t('backup.import.importing') : t('backup.import.button')}
                 </Button>
+
+                <ConfirmDialog
+                    open={confirmOpen}
+                    onOpenChange={setConfirmOpen}
+                    title={t('backup.import.confirmTitle')}
+                    description={t('backup.import.confirmDescription', { name: file?.name ?? '' })}
+                    confirmLabel={t('backup.import.confirmButton')}
+                    destructive
+                    onConfirm={onImport}
+                />
 
                 {rowsAffectedList.length > 0 && (
                     <div className="mt-2 space-y-1">

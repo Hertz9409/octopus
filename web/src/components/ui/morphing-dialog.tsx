@@ -87,6 +87,8 @@ export type MorphingDialogTriggerProps = {
   className?: string;
   style?: React.CSSProperties;
   triggerRef?: React.RefObject<HTMLDivElement>;
+  // 图标型触发器没有可读文本, 由调用方给一句可访问名。
+  label?: string;
 };
 
 function MorphingDialogTrigger({
@@ -94,6 +96,7 @@ function MorphingDialogTrigger({
   className,
   style,
   triggerRef: triggerRefProp,
+  label,
 }: MorphingDialogTriggerProps) {
   const { setIsOpen, isOpen, uniqueId, triggerRef } = useMorphingDialog();
 
@@ -139,7 +142,7 @@ function MorphingDialogTrigger({
       aria-haspopup='dialog'
       aria-expanded={isOpen}
       aria-controls={`motion-ui-morphing-dialog-content-${uniqueId}`}
-      aria-label={`Open dialog ${uniqueId}`}
+      aria-label={label}
       role='button'
       tabIndex={0}
     >
@@ -163,8 +166,6 @@ function MorphingDialogContent({
 }: MorphingDialogContentProps) {
   const { setIsOpen, isOpen, uniqueId, triggerRef } = useMorphingDialog();
   const containerRef = useRef<HTMLDivElement>(null!);
-  const firstFocusableElementRef = useRef<HTMLElement | null>(null);
-  const lastFocusableElementRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -172,18 +173,22 @@ function MorphingDialogContent({
         setIsOpen(false);
       }
       if (event.key === 'Tab') {
-        if (!firstFocusableElementRef.current || !lastFocusableElementRef.current) return;
+        // 内容可能在打开后延迟挂载, 每次按键重新收集可聚焦元素。
+        const focusableElements = containerRef.current?.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        const first = focusableElements?.[0];
+        const last = focusableElements?.[focusableElements.length - 1];
+        if (!first || !last) return;
 
         if (event.shiftKey) {
-          if (document.activeElement === firstFocusableElementRef.current) {
+          if (document.activeElement === first || document.activeElement === document.body) {
             event.preventDefault();
-            lastFocusableElementRef.current.focus();
+            last.focus();
           }
-        } else {
-          if (document.activeElement === lastFocusableElementRef.current) {
-            event.preventDefault();
-            firstFocusableElementRef.current.focus();
-          }
+        } else if (document.activeElement === last) {
+          event.preventDefault();
+          first.focus();
         }
       }
     };
@@ -196,20 +201,32 @@ function MorphingDialogContent({
   }, [setIsOpen]);
 
   useEffect(() => {
-    if (isOpen) {
-      document.body.classList.add('overflow-hidden');
-      const focusableElements = containerRef.current?.querySelectorAll(
-        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-      );
-      if (focusableElements && focusableElements.length > 0) {
-        firstFocusableElementRef.current = focusableElements[0] as HTMLElement;
-        lastFocusableElementRef.current = focusableElements[focusableElements.length - 1] as HTMLElement;
-        (focusableElements[0] as HTMLElement).focus();
-      }
-    } else {
+    if (!isOpen) {
       document.body.classList.remove('overflow-hidden');
       triggerRef.current?.focus();
+      return;
     }
+
+    document.body.classList.add('overflow-hidden');
+    // 打开瞬间内容可能还没挂载(例如日志详情要等数据), 轮询几帧直到出现第一个可聚焦元素。
+    let frame = 0;
+    let raf = 0;
+    const focusFirst = () => {
+      const focusable = containerRef.current?.querySelector<HTMLElement>(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      if (focusable) {
+        focusable.focus();
+        return;
+      }
+      if (frame++ < 30) raf = requestAnimationFrame(focusFirst);
+    };
+    raf = requestAnimationFrame(focusFirst);
+
+    return () => {
+      cancelAnimationFrame(raf);
+      document.body.classList.remove('overflow-hidden');
+    };
   }, [isOpen, triggerRef]);
 
   useClickOutside(

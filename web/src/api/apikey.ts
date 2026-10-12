@@ -120,6 +120,8 @@ export function useCreateAPIKey() {
     const queryClient = useQueryClient();
 
     return useMutation({
+        // 调用方在 mutate 时自行提示错误，声明关闭全局兜底提示避免重复。
+        meta: { errorToast: false },
         mutationFn: (data: CreateAPIKeyRequest) =>
             apiRequest<APIKey>('/api/v1/apikey/create', { method: 'POST', body: data }),
         onSuccess: () => queryClient.invalidateQueries({ queryKey: apiKeyListQueryOptions.queryKey }),
@@ -142,6 +144,8 @@ export function useUpdateAPIKey() {
     const queryClient = useQueryClient();
 
     return useMutation({
+        // 调用方在 mutate 时自行提示错误，声明关闭全局兜底提示避免重复。
+        meta: { errorToast: false },
         mutationFn: (data: UpdateAPIKeyRequest) =>
             apiRequest<APIKey>('/api/v1/apikey/update', { method: 'POST', body: data }),
         onSuccess: () => queryClient.invalidateQueries({ queryKey: apiKeyListQueryOptions.queryKey }),
@@ -160,6 +164,8 @@ export function useDeleteAPIKey() {
     const queryClient = useQueryClient();
 
     return useMutation({
+        // 调用方在 mutate 时自行提示错误，声明关闭全局兜底提示避免重复。
+        meta: { errorToast: false },
         mutationFn: (id: number) =>
             apiRequest<null>(`/api/v1/apikey/delete/${id}`, { method: 'DELETE' }),
         onSuccess: () => queryClient.invalidateQueries({ queryKey: apiKeyListQueryOptions.queryKey }),

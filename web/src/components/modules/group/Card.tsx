@@ -98,14 +98,18 @@ export const GroupCard = memo(function GroupCard({ group, now }: { group: Group;
         submitMembers(members.filter((m) => m.id !== id));
     }, [members, submitMembers]);
 
-    // 点击当前成员即取消选择, 提交 0。
+    // 点击当前成员即取消选择, 提交 0; 清空要说清后果, 与普通的「已更新」区分开。
     const handleActivate = useCallback((itemId: number) => {
         if (group.mode !== 'manual' || activateItem.isPending) return;
+        const clearing = itemId === group.runtime.current_item_id;
         activateItem.mutate(
-            { id: group.id, active_item_id: itemId === group.runtime.current_item_id ? 0 : itemId },
-            { onSuccess, onError },
+            { id: group.id, active_item_id: clearing ? 0 : itemId },
+            {
+                onSuccess: () => toast.success(t(clearing ? 'toast.activatedCleared' : 'toast.updated')),
+                onError,
+            },
         );
-    }, [activateItem, group.id, group.mode, group.runtime.current_item_id, onError, onSuccess]);
+    }, [activateItem, group.id, group.mode, group.runtime.current_item_id, onError, t]);
 
     const handleSubmitEdit = useCallback((values: GroupEditorValues, onDone?: () => void) => {
         const payload: GroupUpdateRequest & { id: number } = { id: group.id };

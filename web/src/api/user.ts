@@ -1,8 +1,10 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useMutation } from '@tanstack/react-query';
+import { toast } from 'sonner';
+import { useTranslations } from 'use-intl';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { apiRequest, apiUnauthorizedEvent, setAPIKey } from './client';
+import { apiRequest, apiUnauthorizedEvent, queryClient, setAPIKey } from './client';
 
 /**
  * 用户登录请求
@@ -124,6 +126,8 @@ export function useLogin() {
     const { setAuth } = useAuthStore();
 
     return useMutation({
+        // 登录页已在表单内展示失败原因，声明关闭全局兜底提示避免重复。
+        meta: { errorToast: false },
         mutationFn: async (data: UserLoginRequest) => {
             setAPIKey(null);
             return apiRequest<string>('/api/v1/user/login', {
@@ -147,6 +151,8 @@ export function useLogin() {
  */
 export function useChangePassword() {
     return useMutation({
+        // 调用方在 mutate 时自行提示错误，声明关闭全局兜底提示避免重复。
+        meta: { errorToast: false },
         mutationFn: (data: { oldPassword: string; newPassword: string }) =>
             apiRequest<string>('/api/v1/user/change-password', {
                 method: 'POST',
@@ -167,6 +173,8 @@ export function useChangePassword() {
  */
 export function useChangeUsername() {
     return useMutation({
+        // 调用方在 mutate 时自行提示错误，声明关闭全局兜底提示避免重复。
+        meta: { errorToast: false },
         mutationFn: (data: { newUsername: string }) =>
             apiRequest<string>('/api/v1/user/change-username', {
                 method: 'POST',
@@ -188,12 +196,26 @@ export function useChangeUsername() {
  * auth.logout(); // 登出
  */
 export function useAuth() {
+    const t = useTranslations('common');
     const store = useAuthStore();
     const { checkAuth, isLoading } = store;
+    const messageRef = useRef(t);
+
+    // 事件回调在挂载时注册一次，语言切换后通过 ref 取到最新文案。
+    useEffect(() => {
+        messageRef.current = t;
+    }, [t]);
 
     // 只在首次挂载时检查认证状态
     useEffect(() => {
-        const handleUnauthorized = () => useAuthStore.getState().logout();
+        const handleUnauthorized = () => {
+            // 多个请求同时 401 时只处理一次，避免重复提示与重复清空缓存。
+            if (!useAuthStore.getState().isAuthenticated) return;
+            // 登出时清空缓存，避免下一位登录者看到上一位的数据。
+            queryClient.clear();
+            useAuthStore.getState().logout();
+            toast.warning(messageRef.current('sessionExpired'));
+        };
         window.addEventListener(apiUnauthorizedEvent, handleUnauthorized);
         if (isLoading) {
             void checkAuth();

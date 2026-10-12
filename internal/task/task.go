@@ -51,13 +51,14 @@ func Register(name string, interval time.Duration, runOnStart bool, fn func()) {
 
 // Update 更新任务的执行间隔
 // 当 interval 为 0 时，删除任务
-func Update(name string, interval time.Duration) {
+// 返回 false 表示任务不存在或更新未送达，调用方可据此说明改动要重启后生效。
+func Update(name string, interval time.Duration) bool {
 	tasksMu.Lock()
 	entry, exists := tasks[name]
 	if !exists {
 		tasksMu.Unlock()
 		log.Warnf("task %s not found", name)
-		return
+		return false
 	}
 
 	if interval <= 0 {
@@ -65,15 +66,17 @@ func Update(name string, interval time.Duration) {
 		tasksMu.Unlock()
 		close(entry.stopCh)
 		log.Infof("task %s removed: interval is 0", name)
-		return
+		return true
 	}
 	tasksMu.Unlock()
 
 	select {
 	case entry.updateCh <- interval:
 		log.Infof("task %s interval updated to %v", name, interval)
+		return true
 	default:
 		log.Warnf("task %s update channel full, skipping", name)
+		return false
 	}
 }
 

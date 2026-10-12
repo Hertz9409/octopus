@@ -76,14 +76,31 @@
                     "free": "Pricing not configured"
                 }
             }
-        }
+        },
+        "create": "Create"
     },
     "common": {
         "copy": {
             "success": "Copied",
             "failed": "Copy failed",
             "noContent": "Nothing to copy"
-        }
+        },
+        "loading": "Loading...",
+        "loadFailed": "Failed to load",
+        "requestFailed": "Request failed, please try again",
+        "retry": "Retry",
+        "sessionExpired": "Your session expired. Please sign in again.",
+        "reload": "Reload",
+        "crashTitle": "Something went wrong",
+        "crashDescription": "This page failed to render. Retry or reload.",
+        "chunkFailedTitle": "Failed to load page assets",
+        "chunkFailedDescription": "The app was probably updated. Reloading fixes it.",
+        "updateReady": "A new version is ready",
+        "initTimeoutTitle": "Initial data is taking too long",
+        "initTimeoutDescription": "Retry, or enter the app anyway — pages will show their own errors.",
+        "enterAnyway": "Enter anyway",
+        "reconnecting": "Live connection lost, reconnecting…",
+        "cancel": "Cancel"
     },
     "home": {
         "metric": {
@@ -170,7 +187,8 @@
             "export": {
                 "button": "Export",
                 "exporting": "Exporting...",
-                "success": "Export started"
+                "success": "Export started",
+                "failed": "Export failed"
             },
             "import": {
                 "title": "Import",
@@ -179,7 +197,10 @@
                 "noFile": "Please select a JSON file first",
                 "success": "Import successful",
                 "failed": "Import failed",
-                "result": "Import result"
+                "result": "Import result",
+                "confirmTitle": "Import this backup?",
+                "confirmDescription": "This replaces all current data with \"{name}\" and cannot be undone. Export a backup first.",
+                "confirmButton": "Replace data"
             }
         },
         "apiKey": {
@@ -222,7 +243,12 @@
                 "updateError": "Failed to update API key",
                 "deleteSuccess": "API key deleted",
                 "deleteError": "Failed to delete API key"
-            }
+            },
+            "created": {
+                "title": "API key created",
+                "description": "This key is shown only once, copy it now."
+            },
+            "expand": "Expand panel"
         },
         "llmPrice": {
             "title": "Model Pricing",
@@ -308,7 +334,8 @@
             "createFailed": "Create failed",
             "updated": "Updated successfully",
             "updateFailed": "Update failed",
-            "deleted": "Deleted successfully"
+            "deleted": "Deleted successfully",
+            "activatedCleared": "Pinned member cleared, the group picks by priority again"
         },
         "create": {
             "submit": "Create",
@@ -318,7 +345,8 @@
             "empty": "No rules",
             "activate": "Set as active",
             "cooling": "Cooling {seconds}s",
-            "affinity": "Affinity {seconds}s"
+            "affinity": "Affinity {seconds}s",
+            "emptyList": "No groups yet"
         },
         "detail": {
             "actions": {
@@ -351,7 +379,8 @@
             "addItem": "Add Model",
             "autoAdd": "Auto Add",
             "clear": "Clear"
-        }
+        },
+        "memberUnavailable": "This member is unavailable because its channel or credential is disabled"
     },
     "model": {
         "create": {
@@ -362,19 +391,23 @@
             "cacheWrite": "Cache Write",
             "cancel": "Cancel",
             "submit": "Create",
-            "submitting": "Creating..."
+            "submitting": "Creating...",
+            "nameRequired": "Enter a model name",
+            "invalidPrice": "Price must be a number of 0 or more"
         },
         "toast": {
             "updated": "Model price updated",
             "updateFailed": "Update failed",
             "deleted": "Model deleted",
-            "deleteFailed": "Delete failed"
+            "deleteFailed": "Delete failed",
+            "invalidPrice": "Prices must be numbers no less than 0"
         },
         "card": {
             "inputCache": "Input/Cache",
             "outputCache": "Output/Cache",
             "edit": "Edit",
-            "delete": "Delete"
+            "delete": "Delete",
+            "emptyList": "No models yet"
         },
         "overlay": {
             "cancel": "Cancel",
@@ -390,7 +423,8 @@
     "log": {
         "list": {
             "empty": "No logs yet",
-            "disconnected": "Log stream disconnected, reconnecting"
+            "disconnected": "Log stream disconnected, reconnecting",
+            "reconnect": "Reconnect"
         },
         "status": {
             "committed": "Responding"
@@ -425,13 +459,15 @@
         "card": {
             "requestCount": "Requests",
             "totalCost": "Total Cost",
+            "keyCount": "Credentials",
             "model": "Model",
             "successRequests": "Successful Requests",
             "failedRequests": "Failed Requests",
             "toast": {
                 "enabled": "Channel enabled",
                 "disabled": "Channel disabled"
-            }
+            },
+            "emptyList": "No channels yet"
         },
         "sync": {
             "title": "Sync all models",
@@ -516,7 +552,18 @@
             "backToStats": "Back to Stats",
             "grantClearAll": "Clear all models",
             "modelRemove": "Remove model",
-            "grantRemove": "Remove this key’s grant"
+            "grantRemove": "Remove this key’s grant",
+            "requireName": "Enter a channel name",
+            "requireBaseUrl": "Enter the base URL",
+            "requirePath": "Paths must start with /",
+            "requireKey": "Add at least one credential with a key",
+            "paramOverrideInvalid": "Invalid JSON, expected an object",
+            "discardTitle": "Discard unsaved changes?",
+            "discardDescription": "Closing now keeps the current configuration unchanged.",
+            "discardConfirm": "Discard changes",
+            "clearAllModelsTitle": "Clear all models?",
+            "clearAllModelsDescription": "Removes {count} models and all their grants; takes effect when you save.",
+            "clearAllModelsConfirm": "Clear models"
         }
     }
 }

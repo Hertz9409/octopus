@@ -2,7 +2,9 @@ import { useId, useState } from 'react';
 import { useTranslations } from 'use-intl';
 import { KeyRound, Plus, Loader, Trash2, Check, X, Info, CalendarDays, Pencil, Maximize2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { AlertDialog } from 'radix-ui';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Switch } from '@/components/ui/switch';
@@ -585,6 +587,8 @@ function APIKeyPanelBase({
     const [viewingStats, setViewingStats] = useState<APIKey | null>(null);
     const [editingKey, setEditingKey] = useState<APIKey | null>(null);
     const [deletingId, setDeletingId] = useState<number | null>(null);
+    // 新建后密钥只返回这一次, 用它弹出一次性展示。
+    const [createdKey, setCreatedKey] = useState<string | null>(null);
 
     const apiKeyList = apiKeys ?? [];
 
@@ -612,9 +616,10 @@ function APIKeyPanelBase({
 
     const handleCreate = (data: APIKeyFormData) => {
         createAPIKey.mutate(data, {
-            onSuccess: () => {
+            onSuccess: (created) => {
                 toast.success(t('apiKey.toast.createSuccess'));
                 setIsAdding(false);
+                setCreatedKey(created.api_key);
             },
             onError: (error) => {
                 const msg = error instanceof Error ? error.message : undefined;
@@ -734,6 +739,31 @@ function APIKeyPanelBase({
                     </AnimatePresence>
                 )}
             </div>
+
+            <AlertDialog.Root open={createdKey !== null} onOpenChange={(open) => { if (!open) setCreatedKey(null); }}>
+                <AlertDialog.Portal>
+                    <AlertDialog.Overlay className="fixed inset-0 z-50 bg-black/50" />
+                    <AlertDialog.Content className="fixed left-1/2 top-1/2 z-50 w-[min(28rem,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 rounded-lg border border-border bg-background p-5 shadow-lg">
+                        <AlertDialog.Title className="text-sm font-medium">
+                            {t('apiKey.created.title')}
+                        </AlertDialog.Title>
+                        <AlertDialog.Description className="mt-2 text-sm text-muted-foreground">
+                            {t('apiKey.created.description')}
+                        </AlertDialog.Description>
+                        <div className="mt-3 flex items-center gap-2">
+                            <code className="min-w-0 flex-1 truncate rounded-lg bg-muted px-3 py-2 font-mono text-xs">
+                                {createdKey}
+                            </code>
+                            <CopyIconButton text={createdKey ?? ''} />
+                        </div>
+                        <div className="mt-5 flex justify-end">
+                            <Button size="sm" onClick={() => setCreatedKey(null)}>
+                                {t('apiKey.form.cancel')}
+                            </Button>
+                        </div>
+                    </AlertDialog.Content>
+                </AlertDialog.Portal>
+            </AlertDialog.Root>
         </div>
     );
 }
@@ -759,6 +789,7 @@ function APIKeyDialogPanel() {
 }
 
 export function SettingAPIKey() {
+    const t = useTranslations('setting');
     return (
         <APIKeyPanelBase
             idPrefix="apikey"
@@ -775,7 +806,7 @@ export function SettingAPIKey() {
                             <Maximize2 className="size-4" />
                         </button>
                     ) : (
-                        <MorphingDialogTrigger className="h-9 w-9 flex items-center justify-center rounded-lg bg-muted/60 text-muted-foreground transition-colors hover:bg-muted">
+                        <MorphingDialogTrigger label={t('apiKey.expand')} className="h-9 w-9 flex items-center justify-center rounded-lg bg-muted/60 text-muted-foreground transition-colors hover:bg-muted">
                             <Maximize2 className="size-4" />
                         </MorphingDialogTrigger>
                     )}

@@ -2,7 +2,9 @@ import { useMemo } from 'react';
 import { ArrowUpAZ } from 'lucide-react';
 import { useTranslations } from 'use-intl';
 import { useChannelStats } from '@/api/channel';
+import { errorMessage } from '@/api/client';
 import { PageActions, usePageActionsStore } from '@/components/common/PageActions';
+import { ListState } from '@/components/common/ListState';
 import { MorphingDialogDescription } from '@/components/ui/morphing-dialog';
 import { Card } from './Card';
 import { ChannelForm } from './Form';
@@ -57,7 +59,8 @@ export function ChannelActions() {
 
 // Channel 渲染渠道列表正文。
 export function Channel() {
-    const { data: statsData } = useChannelStats();
+    const t = useTranslations('channel');
+    const { data: statsData, isPending, isError, error, refetch } = useChannelStats();
     const searchTerm = usePageActionsStore((state) => state.searchTerms.channel || '');
     const layout = usePageActionsStore((state) => state.layouts.channel || 'grid');
     const sortOrder = usePageActionsStore((state) => state.sortOrders.channel === 'desc' ? 'desc' : 'asc');
@@ -87,6 +90,15 @@ export function Channel() {
             columns={{ default: 1, sm: 2, md: 3, lg: 4, xl: 5, '2xl': 6 }}
             estimateItemHeight={232}
             getItemKey={(channel) => `channel-${channel.channel_id}`}
+            emptyState={
+                isPending ? (
+                    <ListState kind="loading" />
+                ) : isError ? (
+                    <ListState kind="error" errorDescription={errorMessage(error)} onRetry={() => void refetch()} />
+                ) : (
+                    <ListState kind="empty" emptyText={t('card.emptyList')} />
+                )
+            }
             renderItem={(channel) => (
                 <Card channel={channel} />
             )}

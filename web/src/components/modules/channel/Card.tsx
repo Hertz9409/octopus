@@ -6,7 +6,7 @@ import {
     MorphingDialogDescription,
 } from '@/components/ui/morphing-dialog';
 import { AnimatePresence, motion } from 'motion/react';
-import { CheckCircle2, DollarSign, Layers, MessageSquare, XCircle } from 'lucide-react';
+import { CheckCircle2, DollarSign, KeyRound, Layers, MessageSquare, XCircle } from 'lucide-react';
 import { type ChannelStatsFormatted, useEnableChannel } from '@/api/channel';
 import { usePageActionsStore } from '@/components/common/PageActions';
 import { ChannelStats } from './Stats';
@@ -27,9 +27,10 @@ export function Card({ channel }: { channel: ChannelStatsFormatted }) {
     const [openInEditing, setOpenInEditing] = useState(false);
     const metrics = channel.formatted;
 
-    // 列表布局的统计项, 缺少 unit 时只显示数值
+    // 列表布局的统计项, 缺少 unit 时只显示数值; 凭据与模型个数是配置事实, 与用量指标并排展示
     const listMetrics: { icon: React.ReactNode; label: string; value: string | number; unit?: string }[] = [
         { icon: <MessageSquare className="size-4 shrink-0 text-primary" />, label: t('requestCount'), value: metrics.request_count.formatted.value, unit: metrics.request_count.formatted.unit },
+        { icon: <KeyRound className="size-4 shrink-0 text-primary" />, label: t('keyCount'), value: channel.key_count },
         { icon: <Layers className="size-4 shrink-0 text-primary" />, label: t('model'), value: channel.models.length },
         { icon: <CheckCircle2 className="size-4 shrink-0 text-emerald-500" />, label: t('successRequests'), value: metrics.request_success.formatted.value },
         { icon: <XCircle className="size-4 shrink-0 text-destructive" />, label: t('failedRequests'), value: metrics.request_failed.formatted.value },
@@ -83,7 +84,7 @@ export function Card({ channel }: { channel: ChannelStatsFormatted }) {
                     </header>
 
                     {layout === 'list' ? (
-                        <dl className="grid grid-cols-2 gap-2 lg:grid-cols-5">
+                        <dl className="grid grid-cols-2 gap-2 lg:grid-cols-6">
                             {listMetrics.map(({ icon, label, value, unit }) => (
                                 <div key={label} className="rounded-2xl border border-border/70 bg-background/80 p-2">
                                     <dt className="mb-1 flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -98,20 +99,35 @@ export function Card({ channel }: { channel: ChannelStatsFormatted }) {
                             ))}
                         </dl>
                     ) : (
-                        <dl className="grid grid-cols-1 gap-3">
-                            {gridMetrics.map(({ icon, label, metric }) => (
-                                <div key={label} className="rounded-2xl border border-border/70 bg-background/80 p-2">
-                                    <dt className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                                        {icon}
-                                        <span className="truncate">{label}</span>
-                                    </dt>
-                                    <dd className="mt-1 text-right text-xl font-bold">
-                                        {metric.formatted.value}
-                                        <span className="ml-1 text-xs font-normal text-muted-foreground">{metric.formatted.unit}</span>
-                                    </dd>
-                                </div>
-                            ))}
-                        </dl>
+                        <>
+                            <dl className="grid grid-cols-1 gap-3">
+                                {gridMetrics.map(({ icon, label, metric }) => (
+                                    <div key={label} className="rounded-2xl border border-border/70 bg-background/80 p-2">
+                                        <dt className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                            {icon}
+                                            <span className="truncate">{label}</span>
+                                        </dt>
+                                        <dd className="mt-1 text-right text-xl font-bold">
+                                            {metric.formatted.value}
+                                            <span className="ml-1 text-xs font-normal text-muted-foreground">{metric.formatted.unit}</span>
+                                        </dd>
+                                    </div>
+                                ))}
+                            </dl>
+                            {/* 网格布局没有凭据与模型个数的统计位, 这两项是配置事实, 单独用一行小字给出 */}
+                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                                <span className="flex items-center gap-1.5">
+                                    <KeyRound className="size-3.5 shrink-0 text-primary" />
+                                    {t('keyCount')}
+                                    <span className="font-bold tabular-nums text-card-foreground">{channel.key_count}</span>
+                                </span>
+                                <span className="flex items-center gap-1.5">
+                                    <Layers className="size-3.5 shrink-0 text-primary" />
+                                    {t('model')}
+                                    <span className="font-bold tabular-nums text-card-foreground">{channel.models.length}</span>
+                                </span>
+                            </div>
+                        </>
                     )}
 
                 </article>
