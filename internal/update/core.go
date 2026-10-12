@@ -14,6 +14,11 @@ import (
 )
 
 func UpdateCore() error {
+	// 未配置下载地址表示当前构建不提供自更新。
+	if updateUrl == "" {
+		return fmt.Errorf("self-update is disabled in this build")
+	}
+
 	log.Infof("start update core")
 
 	filename, err := getDownloadFilename()

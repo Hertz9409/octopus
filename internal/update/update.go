@@ -18,7 +18,8 @@ import (
 	"github.com/charmbracelet/log"
 )
 
-const (
+// 发布地址默认指向上游，可由 ldflags 覆盖；留空表示该构建不提供自更新（fork 构建的镜像使用）。
+var (
 	updateUrl    = "https://github.com/bestruirui/octopus/releases/latest/download"
 	updateApiUrl = "https://api.github.com/repos/bestruirui/octopus/releases/latest"
 )
@@ -83,6 +84,11 @@ func doRequest(url string, useProxy bool) ([]byte, error) {
 }
 
 func GetLatestInfo() (*LatestInfo, error) {
+	// 未配置检查地址时直接回落到当前版本，避免把上游版本误报为可用更新。
+	if updateApiUrl == "" {
+		return &LatestInfo{TagName: conf.Version}, nil
+	}
+
 	body, err := doRequestWithFallback(updateApiUrl)
 	if err != nil {
 		return nil, err

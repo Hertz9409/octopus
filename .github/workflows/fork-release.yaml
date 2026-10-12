@@ -1,0 +1,144 @@
+name: fork-release
+
+# fork 专有发布流程：只在自有分支推送时构建并推送镜像到 ghcr.io/<owner>/octopus。
+# 上游的 release.yaml/build.yaml/template-check.yaml 已在本分支删除（master 上仍保留并已禁用），
+# 因此这里不会与上游的 tag/Release 产生冲突。
+on:
+  push:
+    branches:
+      - hz
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: fork-release-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  image:
+    name: image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Resolve version and image
+        id: version
+        run: |
+          # 版本号只在 scripts/fork/build-image.sh 中推导，这里取回来做镜像标签与前端版本，保证三者一致。
+          VERSION="$(bash scripts/fork/build-image.sh --print-version)"
+          case "${VERSION}" in
+              v[0-9]*.[0-9]*.[0-9]*-hz.[0-9a-f]*)
+                  ;;
+              *)
+                  echo "无法识别的版本号：'${VERSION}'，请检查 main.go 的 // Version 注释与构建脚本" >&2
+                  exit 1
+                  ;;
+          esac
+          # ghcr.io 要求镜像名全小写，而 github.repository_owner 会保留仓库所有者的大小写。
+          OWNER="$(printf '%s' "${GITHUB_REPOSITORY_OWNER}" | tr '[:upper:]' '[:lower:]')"
+          IMAGE="ghcr.io/${OWNER}/octopus"
+          echo "version=${VERSION}" >>"$GITHUB_OUTPUT"
+          echo "image=${IMAGE}" >>"$GITHUB_OUTPUT"
+          echo "Building ${IMAGE}:${VERSION}"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 'latest'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: '11.10.0'
+          cache: true
+          cache_dependency_path: web/pnpm-lock.yaml
+
+      - name: Build frontend
+        working-directory: web
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm run build
+        env:
+          VITE_APP_VERSION: ${{ steps.version.outputs.version }}
+          VITE_GITHUB_REPO: https://github.com/${{ github.repository }}
+
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+
+      - name: Update price
+        run: python3 scripts/updatePrice.py
+
+      - name: Build docker context
+        run: bash scripts/fork/build-image.sh
+        env:
+          # 版本号来自脚本自身的推导，回传一次以确保前端与二进制内版本完全一致。
+          APP_VERSION: ${{ steps.version.outputs.version }}
+          APP_REPO_URL: https://github.com/${{ github.repository }}
+
+      # 推送前先构建并运行一次单平台镜像：坏镜像不应覆盖 latest。
+      - name: Smoke test image (linux/amd64)
+        run: |
+          set -euo pipefail
+          docker build --platform linux/amd64 -f scripts/dockerfile/Dockerfile -t octopus-smoke:local .
+          docker run -d --name octopus-smoke -p 18080:8080 octopus-smoke:local
+          for _ in $(seq 1 45); do
+            if [ "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:18080/ || true)" = "200" ]; then
+              break
+            fi
+            sleep 2
+          done
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:18080/)" = "200"
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:18080/api/v1/update)" = "401"
+          docker logs octopus-smoke 2>&1 | grep -F "${{ steps.version.outputs.version }}"
+          docker logs octopus-smoke 2>&1 | grep -F "https://github.com/${{ github.repository }}"
+          docker rm -f octopus-smoke
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ steps.version.outputs.image }}
+          tags: |
+            type=raw,value=latest
+            type=raw,value=${{ steps.version.outputs.version }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ./scripts/dockerfile/Dockerfile
+          push: true
+          platforms: linux/amd64,linux/i386,linux/arm64,linux/arm/v7
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            TARGETPLATFORM
