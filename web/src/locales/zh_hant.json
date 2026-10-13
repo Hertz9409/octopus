@@ -44,7 +44,8 @@
         "group": "分組",
         "model": "價格",
         "log": "日誌",
-        "setting": "設定"
+        "setting": "設定",
+        "catalog": "模型庫"
     },
     "toolbar": {
         "hideChannelName": "模糊渠道名稱",
@@ -580,5 +581,76 @@
             "clearAllModelsDescription": "將刪除 {count} 個模型及其全部授權，儲存後生效。",
             "clearAllModelsConfirm": "清空模型"
         }
+    },
+    "catalog": {
+        "rules": {
+            "title": "篩選規則",
+            "hint": "儲存後寫入設定, 供應源同步模型時生效。",
+            "enabled": "啟用規則",
+            "releaseDays": "發佈時間",
+            "releaseDaysAny": "不限",
+            "releaseDaysValue": "近 {days} 天",
+            "minContext": "上下文下限 (tokens)",
+            "requireToolCall": "只保留支援工具呼叫",
+            "dropDeprecated": "排除已棄用",
+            "unknownPolicy": "目錄外的模型",
+            "unknownKeep": "保留",
+            "unknownDrop": "丟棄",
+            "unknownHint": "中轉站常給自建模型名, 目錄裡查不到時按這裡處理。",
+            "save": "儲存規則",
+            "reset": "復原",
+            "saved": "規則已儲存",
+            "loading": "正在讀取設定...",
+            "settingsFailed": "設定讀取失敗, 規則暫時不能修改。",
+            "toggle": "篩選規則",
+            "unsaved": "未儲存",
+            "dirtyHint": "規則有未儲存的變更: 先儲存, 再套用到供應源。",
+            "saveFirst": "儲存規則"
+        },
+        "loading": "正在讀取模型庫...",
+        "summary": "保留 {kept} 個 · 供應源在售 {total} 個 · 目錄 {catalog} 條",
+        "empty": "還沒有可用的模型: 先到供應源頁同步模型列表。",
+        "unknownDeveloper": "其他",
+        "groupCount": "保留 {kept} / 共 {total}",
+        "selection": {
+            "all": "全選",
+            "none": "清除選擇"
+        },
+        "actions": {
+            "apply": "應用到供應源",
+            "generate": "產生分組 ({count})"
+        },
+        "groups": {
+            "confirmTitle": "產生模型分組？",
+            "confirmDescription": "為選中的 {count} 個模型各建一個分組, 分組名就是模型名 (用戶端請求用的名字); 成員用模型在供應源裡的全部原始寫法匹配, 帶供應商前綴或日期後綴也能覆蓋, 已存在的分組只補齊成員。",
+            "confirm": "產生分組",
+            "done": "新建 {created} 個分組, 補齊 {members} 個成員",
+            "doneFailed": "新建 {created} 個 · 已有 {reused} 個 · 失敗 {failed} 個 · 新增 {members} 個成員",
+            "doneReused": "新建 {created} 個 · 補齊 {reused} 個已有分組 · 新增 {members} 個成員",
+            "reportTitle": "本次結果",
+            "reportCreated": "已新建",
+            "reportReused": "已有分組",
+            "reportFailed": "失敗",
+            "reportMembers": "成員 +{count}",
+            "reportClose": "收合"
+        },
+        "variants": "{count} 種寫法",
+        "channels": "{count} 個供應源",
+        "capability": {
+            "toolCall": "工具呼叫"
+        },
+        "status": {
+            "deprecated": "已棄用",
+            "beta": "測試版",
+            "unknown": "目錄未收錄"
+        },
+        "reason": {
+            "unknown": "目錄未收錄",
+            "deprecated": "已棄用",
+            "tool_call": "不支援工具呼叫",
+            "context": "上下文不足",
+            "release": "發布過早"
+        },
+        "summaryUpdated": "目錄更新於 {time}"
     }
 }

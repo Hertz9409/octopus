@@ -44,7 +44,8 @@
         "group": "Group",
         "model": "Price",
         "log": "Log",
-        "setting": "Setting"
+        "setting": "Setting",
+        "catalog": "Catalog"
     },
     "toolbar": {
         "hideChannelName": "Blur channel names",
@@ -580,5 +581,76 @@
             "clearAllModelsDescription": "Removes {count} models and all their grants; takes effect when you save.",
             "clearAllModelsConfirm": "Clear models"
         }
+    },
+    "catalog": {
+        "rules": {
+            "title": "Filter rules",
+            "hint": "Saved to settings; applied when channels sync their models.",
+            "enabled": "Enable rules",
+            "releaseDays": "Release date",
+            "releaseDaysAny": "Any",
+            "releaseDaysValue": "Last {days} days",
+            "minContext": "Minimum context (tokens)",
+            "requireToolCall": "Require tool calling",
+            "dropDeprecated": "Drop deprecated",
+            "unknownPolicy": "Models missing from the catalog",
+            "unknownKeep": "Keep",
+            "unknownDrop": "Drop",
+            "unknownHint": "Aggregators often expose custom names; this decides their fate.",
+            "save": "Save rules",
+            "reset": "Discard",
+            "saved": "Rules saved",
+            "loading": "Loading settings...",
+            "settingsFailed": "Failed to load settings, rules are read-only for now.",
+            "toggle": "Filter rules",
+            "unsaved": "Unsaved",
+            "dirtyHint": "Rules have unsaved changes: save them before applying to channels.",
+            "saveFirst": "Save rules"
+        },
+        "loading": "Loading the catalog...",
+        "summary": "{kept} kept · {total} in channels · {catalog} catalog entries",
+        "empty": "No models yet — sync a channel first.",
+        "unknownDeveloper": "Other",
+        "groupCount": "{kept} of {total}",
+        "selection": {
+            "all": "Select all",
+            "none": "Clear"
+        },
+        "actions": {
+            "apply": "Apply to channels",
+            "generate": "Create groups ({count})"
+        },
+        "groups": {
+            "confirmTitle": "Create model groups?",
+            "confirmDescription": "Create one group per selected model ({count}); the group name is the model name clients request. Members match every raw spelling used by your channels, so vendor prefixes and date suffixes are covered, and existing groups only get the new members appended.",
+            "confirm": "Create groups",
+            "done": "Created {created} groups, added {members} members",
+            "doneFailed": "created {created} · reused {reused} · failed {failed} · added {members} members",
+            "doneReused": "created {created} · filled {reused} existing groups · added {members} members",
+            "reportTitle": "This run",
+            "reportCreated": "created",
+            "reportReused": "existing group",
+            "reportFailed": "failed",
+            "reportMembers": "+{count} members",
+            "reportClose": "Hide"
+        },
+        "variants": "{count} spellings",
+        "channels": "{count} channels",
+        "capability": {
+            "toolCall": "Tool calling"
+        },
+        "status": {
+            "deprecated": "Deprecated",
+            "beta": "Beta",
+            "unknown": "Not in catalog"
+        },
+        "reason": {
+            "unknown": "Not in catalog",
+            "deprecated": "Deprecated",
+            "tool_call": "No tool calling",
+            "context": "Context too small",
+            "release": "Released too early"
+        },
+        "summaryUpdated": "catalog updated {time}"
     }
 }

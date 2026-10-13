@@ -1,6 +1,9 @@
 package cmd
 
 import (
+	"context"
+
+	"github.com/bestruirui/octopus/internal/catalog"
 	"github.com/bestruirui/octopus/internal/conf"
 	"github.com/bestruirui/octopus/internal/db"
 	"github.com/bestruirui/octopus/internal/op"
@@ -40,6 +43,11 @@ var startCmd = &cobra.Command{
 		if err := op.UserInit(); err != nil {
 			log.Errorf("user init error: %v", err)
 			return
+		}
+
+		// 目录快照先读库, 首次网络更新之前模型库页面就能用。
+		if err := catalog.Load(context.Background()); err != nil {
+			log.Warnf("catalog load error: %v", err)
 		}
 
 		if err := server.Start(); err != nil {

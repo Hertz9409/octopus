@@ -6,6 +6,7 @@ export const pageImports = {
     channel: () => import('@/components/modules/channel'),
     group: () => import('@/components/modules/group'),
     model: () => import('@/components/modules/model'),
+    catalog: () => import('@/components/modules/catalog'),
     log: () => import('@/components/modules/log'),
     setting: () => import('@/components/modules/setting'),
 };

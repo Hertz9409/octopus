@@ -31,6 +31,7 @@ const Home = lazy(() => retryImport(() => pageImports.home()).then((module) => (
 const Channel = lazy(() => retryImport(() => pageImports.channel()).then((module) => ({ default: module.Channel })));
 const Group = lazy(() => retryImport(() => pageImports.group()).then((module) => ({ default: module.Group })));
 const Model = lazy(() => retryImport(() => pageImports.model()).then((module) => ({ default: module.Model })));
+const Catalog = lazy(() => retryImport(() => pageImports.catalog()).then((module) => ({ default: module.Catalog })));
 const Log = lazy(() => retryImport(() => pageImports.log()).then((module) => ({ default: module.Log })));
 const Setting = lazy(() => retryImport(() => pageImports.setting()).then((module) => ({ default: module.Setting })));
 const HomeActions = lazy(() => retryImport(() => pageImports.home()).then((module) => ({ default: module.HomeActions })));
@@ -229,6 +230,7 @@ export function AppContainer() {
                             {visibleItem === 'channel' && <Channel />}
                             {visibleItem === 'group' && <Group />}
                             {visibleItem === 'model' && <Model />}
+                            {visibleItem === 'catalog' && <Catalog />}
                             {visibleItem === 'log' && <Log />}
                             {visibleItem === 'setting' && <Setting />}
                         </motion.div>

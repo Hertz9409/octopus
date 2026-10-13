@@ -31,15 +31,18 @@ export function additionsForGroup(group: Group, grants: ChannelGrantCandidate[])
     return additions;
 }
 
-// syncGroupsAfterChannelSync 用最新的授权列表补齐所有分组, 逐个分组提交, 单个分组失败不影响其它分组。
+// syncGroupsAfterChannelSync 用最新的授权列表补齐分组, 逐个分组提交, 单个分组失败不影响其它分组。
 // 提交的是「原成员 + 新增成员」的整体替换, 新成员排在末尾, 已有成员的顺序与优先级不变。
-export async function syncGroupsAfterChannelSync(): Promise<GroupSyncResult[]> {
+// 传 groupIds 时只处理这几个分组(模型库刚为它们建过成员), 未命中列表的 ID 会被忽略。
+export async function syncGroupsAfterChannelSync(options: { groupIds?: number[] } = {}): Promise<GroupSyncResult[]> {
     const [groups, grants] = await Promise.all([
         queryClient.fetchQuery({ ...groupListQueryOptions, staleTime: 0 }),
         queryClient.fetchQuery({ ...channelGrantListQueryOptions, staleTime: 0 }),
     ]);
+    const only = options.groupIds ? new Set(options.groupIds) : null;
     const results: GroupSyncResult[] = [];
     for (const group of groups) {
+        if (only && !only.has(group.id)) continue;
         const additions = additionsForGroup(group, grants);
         if (additions === 'invalid-pattern') {
             results.push({ groupId: group.id, groupName: group.name, added: 0, status: 'skipped', reason: 'invalid-pattern' });

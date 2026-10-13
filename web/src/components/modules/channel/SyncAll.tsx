@@ -3,6 +3,7 @@ import { AlertTriangle, CheckCircle2, MinusCircle, RefreshCw, XCircle } from 'lu
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'use-intl';
 import { toast } from 'sonner';
+import { catalogModelsQueryOptions } from '@/api/catalog';
 import { useChannelStats } from '@/api/channel';
 import { errorMessage } from '@/api/client';
 import { groupListQueryOptions, modelListQueryOptions } from '@/api/queries';
@@ -43,23 +44,39 @@ const STATUS_TONE: Record<SyncStatus, string> = {
     skipped: 'text-muted-foreground',
 };
 
-// SyncAll 是渠道页工具栏上的「同步全部模型」入口; 弹窗内容只在打开期间挂载, 每次打开都是全新一轮。
-export function SyncAll() {
+// SyncAll 是「同步全部模型」入口: 不传 label 时渲染成渠道页工具栏上的图标按钮, 传 label 则渲染成带文字的普通按钮,
+// 供模型库页面复用同一套确认、进度与结果流程。弹窗内容只在打开期间挂载, 每次打开都是全新一轮。
+type SyncAllProps = { label?: string };
+
+export function SyncAll({ label }: SyncAllProps = {}) {
     const t = useTranslations('toolbar');
+    const title = label ?? t('syncModels');
 
     return (
         <MorphingDialog>
             <MorphingDialogTrigger
-                className={buttonVariants({
-                    variant: 'ghost',
-                    size: 'icon',
-                    className: 'rounded-xl text-muted-foreground transition-none hover:bg-transparent hover:text-foreground',
-                })}
+                label={title}
+                className={
+                    label
+                        ? buttonVariants({ variant: 'outline', size: 'sm', className: 'rounded-xl' })
+                        : buttonVariants({
+                              variant: 'ghost',
+                              size: 'icon',
+                              className: 'rounded-xl text-muted-foreground transition-none hover:bg-transparent hover:text-foreground',
+                          })
+                }
             >
-                <span className="flex items-center justify-center" title={t('syncModels')} aria-hidden="true">
-                    <RefreshCw className="size-4" />
-                </span>
-                <span className="sr-only">{t('syncModels')}</span>
+                {label ? (
+                    <>
+                        <RefreshCw className="size-4" aria-hidden="true" />
+                        <span className="text-xs">{title}</span>
+                    </>
+                ) : (
+                    <>
+                        <RefreshCw className="size-4" aria-hidden="true" />
+                        <span className="sr-only">{title}</span>
+                    </>
+                )}
             </MorphingDialogTrigger>
             <MorphingDialogContainer>
                 <SyncAllContent />
@@ -101,6 +118,8 @@ function SyncAllContent() {
         queryClient.invalidateQueries({ queryKey: ['channels'] });
         queryClient.invalidateQueries({ queryKey: modelListQueryOptions.queryKey });
         queryClient.invalidateQueries({ queryKey: groupListQueryOptions.queryKey });
+        // 模型库页面展示的就是各渠道的模型清单, 同步后必须一起失效, 否则它还是同步前的旧结果。
+        queryClient.invalidateQueries({ queryKey: catalogModelsQueryOptions.queryKey });
         const final = countByStatus(getSyncProgress().results);
         const summary = t('summary', final);
         if (final.failed > 0 || final.partial > 0) {

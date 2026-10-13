@@ -10,12 +10,58 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bestruirui/octopus/internal/catalog"
 	"github.com/bestruirui/octopus/internal/model"
 	"github.com/bestruirui/octopus/internal/rhttp"
 	"github.com/charmbracelet/log"
 )
 
 const llmPriceUrl = "https://models.dev/api.json"
+
+// fetchCatalog 拉取 models.dev 的原始数据, 直连失败时回退到代理。
+func fetchCatalog(ctx context.Context) ([]byte, error) {
+	body, err := fetchCatalogWith(ctx, false)
+	if err == nil {
+		return body, nil
+	}
+	log.Warnf("direct catalog request failed, trying with proxy: %v", err)
+	return fetchCatalogWith(ctx, true)
+}
+
+func fetchCatalogWith(ctx context.Context, useProxy bool) ([]byte, error) {
+	var (
+		httpClient interface {
+			Do(*http.Request) (*http.Response, error)
+		}
+		err error
+	)
+	if useProxy {
+		httpClient, err = rhttp.Proxy()
+	} else {
+		httpClient, err = rhttp.Direct()
+	}
+	if err != nil {
+		return nil, err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, llmPriceUrl, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("failed to fetch LLM info: %s", resp.Status)
+	}
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response body: %w", err)
+	}
+	return body, nil
+}
 
 // developerFamilies 定义研发商及其自研模型系列前缀。
 var developerFamilies = map[string][]string{
@@ -41,52 +87,13 @@ func UpdateLLMPrice(ctx context.Context) error {
 	defer func() {
 		log.Debugf("update LLM price task finished, update time: %s", time.Since(startTime))
 	}()
-	var body []byte
-	httpClient, err := rhttp.Direct()
-	if err == nil {
-		req, requestErr := http.NewRequestWithContext(ctx, http.MethodGet, llmPriceUrl, nil)
-		if requestErr != nil {
-			return requestErr
-		}
-		req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
-		resp, requestErr := httpClient.Do(req)
-		if requestErr != nil {
-			err = requestErr
-		} else {
-			if resp.StatusCode != http.StatusOK {
-				err = fmt.Errorf("failed to fetch LLM info: %s", resp.Status)
-			} else {
-				body, err = io.ReadAll(resp.Body)
-				if err != nil {
-					err = fmt.Errorf("failed to read response body: %w", err)
-				}
-			}
-			resp.Body.Close()
-		}
-	}
+	body, err := fetchCatalog(ctx)
 	if err != nil {
-		log.Warnf("direct request failed, trying with proxy: %v", err)
-		httpClient, err = rhttp.Proxy()
-		if err != nil {
-			return err
-		}
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, llmPriceUrl, nil)
-		if err != nil {
-			return err
-		}
-		req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
-		resp, err := httpClient.Do(req)
-		if err != nil {
-			return err
-		}
-		defer resp.Body.Close()
-		if resp.StatusCode != http.StatusOK {
-			return fmt.Errorf("failed to fetch LLM info: %s", resp.Status)
-		}
-		body, err = io.ReadAll(resp.Body)
-		if err != nil {
-			return fmt.Errorf("failed to read response body: %w", err)
-		}
+		return err
+	}
+	// 模型库目录与价格来自同一份数据, 顺手刷新一次; 目录失败不影响价格更新。
+	if err := catalog.UpdateFromRaw(ctx, body); err != nil {
+		log.Warnf("failed to update model catalog: %v", err)
 	}
 	var rawPrice map[string]struct {
 		Models map[string]struct {

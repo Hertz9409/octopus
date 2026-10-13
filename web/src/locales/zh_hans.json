@@ -44,7 +44,8 @@
         "group": "分组",
         "model": "价格",
         "log": "日志",
-        "setting": "设置"
+        "setting": "设置",
+        "catalog": "模型库"
     },
     "toolbar": {
         "hideChannelName": "模糊渠道名称",
@@ -580,5 +581,76 @@
             "clearAllModelsDescription": "将删除 {count} 个模型及其全部授权，保存后生效。",
             "clearAllModelsConfirm": "清空模型"
         }
+    },
+    "catalog": {
+        "rules": {
+            "title": "筛选规则",
+            "hint": "保存后写入设置, 渠道同步模型时生效。",
+            "enabled": "启用规则",
+            "releaseDays": "发布时间",
+            "releaseDaysAny": "不限",
+            "releaseDaysValue": "近 {days} 天",
+            "minContext": "上下文下限 (tokens)",
+            "requireToolCall": "只保留支持工具调用",
+            "dropDeprecated": "排除已弃用",
+            "unknownPolicy": "目录外的模型",
+            "unknownKeep": "保留",
+            "unknownDrop": "丢弃",
+            "unknownHint": "中转站常给自建模型名, 目录里查不到时按这里处理。",
+            "save": "保存规则",
+            "reset": "撤销",
+            "saved": "规则已保存",
+            "loading": "正在读取设置...",
+            "settingsFailed": "设置读取失败, 规则暂时不能修改。",
+            "toggle": "筛选规则",
+            "unsaved": "未保存",
+            "dirtyHint": "规则有未保存的改动: 先保存, 再应用到渠道。",
+            "saveFirst": "保存规则"
+        },
+        "loading": "正在读取模型库...",
+        "summary": "保留 {kept} 个 · 渠道在售 {total} 个 · 目录 {catalog} 条",
+        "empty": "还没有可用的模型: 先到渠道页同步模型列表。",
+        "unknownDeveloper": "其他",
+        "groupCount": "保留 {kept} / 共 {total}",
+        "selection": {
+            "all": "全选",
+            "none": "清空选择"
+        },
+        "actions": {
+            "apply": "应用到渠道",
+            "generate": "生成分组 ({count})"
+        },
+        "groups": {
+            "confirmTitle": "生成模型分组？",
+            "confirmDescription": "为选中的 {count} 个模型各建一个分组, 分组名就是模型名 (客户端请求用的名字); 成员用模型在渠道里的全部原始写法匹配, 带供应商前缀或日期后缀也能覆盖, 已存在的分组只补齐成员。",
+            "confirm": "生成分组",
+            "done": "新建 {created} 个分组, 补齐 {members} 个成员",
+            "doneFailed": "新建 {created} 个 · 已有 {reused} 个 · 失败 {failed} 个 · 新增 {members} 个成员",
+            "doneReused": "新建 {created} 个 · 补齐 {reused} 个已有分组 · 新增 {members} 个成员",
+            "reportTitle": "本次结果",
+            "reportCreated": "已新建",
+            "reportReused": "已有分组",
+            "reportFailed": "失败",
+            "reportMembers": "成员 +{count}",
+            "reportClose": "收起"
+        },
+        "variants": "{count} 种写法",
+        "channels": "{count} 个渠道",
+        "capability": {
+            "toolCall": "工具调用"
+        },
+        "status": {
+            "deprecated": "已弃用",
+            "beta": "测试版",
+            "unknown": "目录未收录"
+        },
+        "reason": {
+            "unknown": "目录未收录",
+            "deprecated": "已弃用",
+            "tool_call": "不支持工具调用",
+            "context": "上下文不足",
+            "release": "发布过早"
+        },
+        "summaryUpdated": "目录更新于 {time}"
     }
 }

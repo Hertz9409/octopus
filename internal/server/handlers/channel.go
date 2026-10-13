@@ -18,6 +18,7 @@ import (
 	"github.com/bestruirui/octopus/internal/server/middleware"
 	"github.com/bestruirui/octopus/internal/server/resp"
 	"github.com/bestruirui/octopus/internal/server/router"
+	"github.com/charmbracelet/log"
 	"github.com/dlclark/regexp2"
 	"github.com/gin-gonic/gin"
 )
@@ -263,6 +264,12 @@ func fetchModel(c *gin.Context) {
 		}
 	}
 
+	// 模型库规则由模型库页维护, 与两枚正则同取 AND。总开关关闭或目录为空时 Keep 一律放行,
+	// 只有规则生效时才会丢弃模型; 丢弃原因在这里累计, 结束时打一条日志, 便于排查「模型为什么没了」。
+	catalogFilter := op.CatalogFilterGet()
+	droppedByReason := make(map[string]int)
+	droppedNames := make([]string, 0, 8)
+
 	// 模型名须同时通过渠道与全局两枚过滤正则, 编译与匹配错误统一按请求错误返回。
 	matches := func(name string) (bool, error) {
 		if re != nil {
@@ -282,6 +289,13 @@ func fetchModel(c *gin.Context) {
 			if !matched {
 				return false, nil
 			}
+		}
+		if _, _, kept, reason := catalogFilter.Keep(name); !kept {
+			droppedByReason[reason]++
+			if len(droppedNames) < 8 {
+				droppedNames = append(droppedNames, name)
+			}
+			return false, nil
 		}
 		return true, nil
 	}
@@ -323,6 +337,19 @@ func fetchModel(c *gin.Context) {
 	models := make([]model.ChannelFetchModel, 0, len(order))
 	for _, name := range order {
 		models = append(models, model.ChannelFetchModel{Name: name, Protocols: protocolsByModel[name]})
+	}
+	if len(droppedByReason) > 0 {
+		total := 0
+		for _, count := range droppedByReason {
+			total += count
+		}
+		// 探测收的是尚未落库的配置, 没有渠道 ID, 用名字定位; 未命名渠道显示占位。
+		name := target.Name
+		if name == "" {
+			name = "(unnamed)"
+		}
+		log.Infof("catalog filter dropped %d models of channel %s (%v), examples: %s",
+			total, name, droppedByReason, strings.Join(droppedNames, ", "))
 	}
 	resp.Success(c, models)
 }
