@@ -8,7 +8,7 @@ import type { StatsMetricsFormatted } from '@/api/stats';
 // 榜单只展示这几项, 渠道可直接复用 api/channel 已算好的 formatted。
 type RankMetrics = Pick<
     StatsMetricsFormatted,
-    'total_cost' | 'total_token' | 'request_count' | 'request_success' | 'request_failed'
+    'total_token' | 'request_count' | 'request_success' | 'request_failed'
 >;
 
 // 榜单中的一个条目, 渠道和模型共用。
@@ -34,7 +34,7 @@ function RankCard({
     hideChannelName?: boolean;
 }) {
     const t = useTranslations('home.rank');
-    const sortField = sortMode === 'cost' ? 'total_cost' : sortMode === 'count' ? 'request_count' : 'total_token';
+    const sortField = sortMode === 'count' ? 'request_count' : 'total_token';
     const ranked = [...items].sort((a, b) => b.formatted[sortField].raw - a.formatted[sortField].raw);
 
     return (

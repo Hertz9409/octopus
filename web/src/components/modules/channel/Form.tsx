@@ -112,6 +112,9 @@ function ChannelFormFields({ channel, onBack }: { channel?: ChannelDetail; onBac
     useEffect(() => {
         if (!isDirty) return;
         const handleKeyDown = (event: KeyboardEvent) => {
+            // 下拉与浮层自己消费 Esc: 放过它们, 否则按 Esc 关不掉下拉反而弹确认框。
+            if (event.target instanceof Element && event.target.closest('[data-slot="select-content"], [data-slot="popover-content"]')) return;
+            // 确认框已经弹出时不再拦截: Esc 交给它自己关(Radix), 外层面板由 morphing-dialog 的守卫挡住。
             if (event.key !== 'Escape' || isDiscardOpen) return;
             // 捕获阶段拦住对话框自身的 Esc 关闭, 换成确认弹窗。
             event.stopPropagation();

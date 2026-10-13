@@ -25,11 +25,8 @@
         "requestCount": "请求次数",
         "timeConsumed": "消耗时间",
         "totalToken": "消耗词元",
-        "totalCost": "消耗费用",
         "inputTokens": "输入词元",
-        "inputCost": "输入费用",
         "outputTokens": "输出词元",
-        "outputCost": "输出费用",
         "successRequests": "成功请求",
         "failedRequests": "失败请求",
         "expireAt": "过期时间",
@@ -42,10 +39,8 @@
         "home": "主页",
         "channel": "渠道",
         "group": "分组",
-        "model": "价格",
         "log": "日志",
-        "setting": "设置",
-        "catalog": "模型库"
+        "setting": "设置"
     },
     "toolbar": {
         "hideChannelName": "模糊渠道名称",
@@ -70,11 +65,6 @@
                     "all": "全部分组",
                     "withMembers": "有成员",
                     "empty": "空分组"
-                },
-                "model": {
-                    "all": "全部模型",
-                    "priced": "已配置价格",
-                    "free": "未配置价格"
                 }
             }
         },
@@ -105,7 +95,6 @@
     },
     "home": {
         "metric": {
-            "cost": "金额",
             "count": "次数",
             "tokens": "词元"
         },
@@ -113,7 +102,6 @@
             "requestCount": "请求次数",
             "waitTime": "消耗时间",
             "totalToken": "消耗词元",
-            "totalCost": "消耗费用",
             "noData": "无数据"
         },
         "total": {
@@ -124,16 +112,12 @@
             "requestCount": "请求次数",
             "timeConsumed": "消耗时间",
             "totalToken": "消耗词元",
-            "totalCost": "消耗费用",
             "inputTokens": "输入词元",
-            "inputCost": "输入费用",
-            "outputTokens": "输出词元",
-            "outputCost": "输出费用"
+            "outputTokens": "输出词元"
         },
         "chart": {
             "title": "趋势",
             "totalRequests": "请求次数",
-            "totalCost": "消费金额",
             "totalTokens": "词元消耗",
             "timePeriod": "时间周期",
             "period": {
@@ -207,15 +191,11 @@
         "apiKey": {
             "title": "API 密钥",
             "empty": "暂无 API 密钥",
-            "add": "添加密钥",
             "loadFailed": "加载失败",
             "form": {
                 "name": "名称",
                 "value": "密钥值",
                 "valuePlaceholder": "留空自动生成",
-                "maxCost": "最大金额",
-                "maxCostPlaceholder": "请输入金额",
-                "unlimited": "无限制",
                 "expireAt": "过期日期",
                 "selectDate": "选择日期",
                 "neverExpire": "永不过期",
@@ -232,8 +212,6 @@
                 "noData": "暂无统计数据",
                 "inputToken": "输入词元",
                 "outputToken": "输出词元",
-                "inputCost": "输入费用",
-                "outputCost": "输出费用",
                 "requestSuccess": "成功请求",
                 "requestFailed": "失败请求"
             },
@@ -250,32 +228,6 @@
                 "description": "密钥只在创建时显示这一次，请立即复制保存。"
             },
             "expand": "放大面板"
-        },
-        "llmPrice": {
-            "title": "模型价格",
-            "updateInterval": {
-                "label": "自动更新间隔（小时）",
-                "placeholder": "请输入间隔（小时）"
-            },
-            "manualUpdate": {
-                "label": "手动更新价格",
-                "button": "立即更新",
-                "updating": "更新中..."
-            },
-            "lastUpdate": "上次更新",
-            "neverUpdated": "从未更新",
-            "updateSuccess": "价格更新成功",
-            "updateFailed": "价格更新失败",
-            "rebuild": {
-                "label": "重建价格数据",
-                "description": "重新匹配并清理模型价格\n会重置手动设置的价格",
-                "button": "重建",
-                "cancel": "取消",
-                "confirm": "确认重建",
-                "rebuilding": "重建中...",
-                "success": "价格数据重建成功，共处理 {count} 个模型",
-                "failed": "价格数据重建失败"
-            }
         },
         "account": {
             "title": "账户设置",
@@ -344,7 +296,6 @@
         },
         "card": {
             "empty": "暂无规则",
-            "activate": "设为活动项",
             "cooling": "冷却 {seconds}s",
             "affinity": "亲和 {seconds}s",
             "emptyList": "还没有分组"
@@ -388,44 +339,6 @@
         },
         "memberUnavailable": "该成员的渠道或凭据已停用"
     },
-    "model": {
-        "create": {
-            "name": "模型名称",
-            "input": "输入价格",
-            "output": "输出价格",
-            "cacheRead": "缓存读取",
-            "cacheWrite": "缓存写入",
-            "cancel": "取消",
-            "submit": "创建",
-            "submitting": "创建中...",
-            "nameRequired": "请填写模型名称",
-            "invalidPrice": "价格必须是不小于 0 的数字"
-        },
-        "toast": {
-            "updated": "模型价格已更新",
-            "updateFailed": "更新失败",
-            "deleted": "模型已删除",
-            "deleteFailed": "删除失败",
-            "invalidPrice": "价格需要填写不小于 0 的数字"
-        },
-        "card": {
-            "inputCache": "输入/缓存",
-            "outputCache": "输出/缓存",
-            "edit": "编辑",
-            "delete": "删除",
-            "emptyList": "还没有模型"
-        },
-        "overlay": {
-            "cancel": "取消",
-            "deleting": "删除中...",
-            "confirmDelete": "确认删除",
-            "input": "输入",
-            "output": "输出",
-            "cacheRead": "缓存读取",
-            "cacheWrite": "缓存写入",
-            "save": "保存"
-        }
-    },
     "log": {
         "list": {
             "empty": "暂无日志",
@@ -464,7 +377,6 @@
     "channel": {
         "card": {
             "requestCount": "请求次数",
-            "totalCost": "总成本",
             "keyCount": "凭据",
             "model": "模型",
             "successRequests": "成功请求",
@@ -513,11 +425,9 @@
         "stats": {
             "totalRequests": "总请求",
             "totalToken": "总词元",
-            "totalCost": "总成本",
             "avgWaitTime": "等待时间",
             "models": "模型",
             "noModels": "暂未选择模型",
-            "sortByCost": "金额",
             "sortByCount": "次数",
             "sortByTokens": "词元",
             "edit": "编辑",
@@ -581,76 +491,5 @@
             "clearAllModelsDescription": "将删除 {count} 个模型及其全部授权，保存后生效。",
             "clearAllModelsConfirm": "清空模型"
         }
-    },
-    "catalog": {
-        "rules": {
-            "title": "筛选规则",
-            "hint": "保存后写入设置, 渠道同步模型时生效。",
-            "enabled": "启用规则",
-            "releaseDays": "发布时间",
-            "releaseDaysAny": "不限",
-            "releaseDaysValue": "近 {days} 天",
-            "minContext": "上下文下限 (tokens)",
-            "requireToolCall": "只保留支持工具调用",
-            "dropDeprecated": "排除已弃用",
-            "unknownPolicy": "目录外的模型",
-            "unknownKeep": "保留",
-            "unknownDrop": "丢弃",
-            "unknownHint": "中转站常给自建模型名, 目录里查不到时按这里处理。",
-            "save": "保存规则",
-            "reset": "撤销",
-            "saved": "规则已保存",
-            "loading": "正在读取设置...",
-            "settingsFailed": "设置读取失败, 规则暂时不能修改。",
-            "toggle": "筛选规则",
-            "unsaved": "未保存",
-            "dirtyHint": "规则有未保存的改动: 先保存, 再应用到渠道。",
-            "saveFirst": "保存规则"
-        },
-        "loading": "正在读取模型库...",
-        "summary": "保留 {kept} 个 · 渠道在售 {total} 个 · 目录 {catalog} 条",
-        "empty": "还没有可用的模型: 先到渠道页同步模型列表。",
-        "unknownDeveloper": "其他",
-        "groupCount": "保留 {kept} / 共 {total}",
-        "selection": {
-            "all": "全选",
-            "none": "清空选择"
-        },
-        "actions": {
-            "apply": "应用到渠道",
-            "generate": "生成分组 ({count})"
-        },
-        "groups": {
-            "confirmTitle": "生成模型分组？",
-            "confirmDescription": "为选中的 {count} 个模型各建一个分组, 分组名就是模型名 (客户端请求用的名字); 成员用模型在渠道里的全部原始写法匹配, 带供应商前缀或日期后缀也能覆盖, 已存在的分组只补齐成员。",
-            "confirm": "生成分组",
-            "done": "新建 {created} 个分组, 补齐 {members} 个成员",
-            "doneFailed": "新建 {created} 个 · 已有 {reused} 个 · 失败 {failed} 个 · 新增 {members} 个成员",
-            "doneReused": "新建 {created} 个 · 补齐 {reused} 个已有分组 · 新增 {members} 个成员",
-            "reportTitle": "本次结果",
-            "reportCreated": "已新建",
-            "reportReused": "已有分组",
-            "reportFailed": "失败",
-            "reportMembers": "成员 +{count}",
-            "reportClose": "收起"
-        },
-        "variants": "{count} 种写法",
-        "channels": "{count} 个渠道",
-        "capability": {
-            "toolCall": "工具调用"
-        },
-        "status": {
-            "deprecated": "已弃用",
-            "beta": "测试版",
-            "unknown": "目录未收录"
-        },
-        "reason": {
-            "unknown": "目录未收录",
-            "deprecated": "已弃用",
-            "tool_call": "不支持工具调用",
-            "context": "上下文不足",
-            "release": "发布过早"
-        },
-        "summaryUpdated": "目录更新于 {time}"
     }
 }

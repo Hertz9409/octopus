@@ -1,7 +1,7 @@
 import { queryOptions, useQuery } from '@tanstack/react-query';
 import { apiRequest } from './client';
 import { statsDailyQueryOptions, statsHourlyQueryOptions, statsTotalQueryOptions } from './queries';
-import { formatCount, formatMoney, formatTime } from '@/lib/utils';
+import { formatCount, formatTime } from '@/lib/utils';
 
 /**
  * 统计数据
@@ -9,8 +9,6 @@ import { formatCount, formatMoney, formatTime } from '@/lib/utils';
 export interface StatsMetrics {
     input_token: number;
     output_token: number;
-    input_cost: number;
-    output_cost: number;
     wait_time: number;
     request_success: number;
     request_failed: number;
@@ -19,15 +17,12 @@ export interface StatsMetrics {
 export interface StatsMetricsFormatted {
     input_token: ReturnType<typeof formatCount>;
     output_token: ReturnType<typeof formatCount>;
-    input_cost: ReturnType<typeof formatMoney>;
-    output_cost: ReturnType<typeof formatMoney>;
     wait_time: ReturnType<typeof formatTime>;
     request_success: ReturnType<typeof formatCount>;
     request_failed: ReturnType<typeof formatCount>;
 
     request_count: ReturnType<typeof formatCount>;
     total_token: ReturnType<typeof formatCount>;
-    total_cost: ReturnType<typeof formatMoney>;
 }
 
 // formatStatsMetrics 把一组累计统计格式化为界面展示字段，并补齐合计项。
@@ -37,9 +32,6 @@ export function formatStatsMetrics(metrics: StatsMetrics): StatsMetricsFormatted
         input_token: formatCount(metrics.input_token),
         output_token: formatCount(metrics.output_token),
         total_token: formatCount(metrics.input_token + metrics.output_token),
-        input_cost: formatMoney(metrics.input_cost),
-        output_cost: formatMoney(metrics.output_cost),
-        total_cost: formatMoney(metrics.input_cost + metrics.output_cost),
         wait_time: formatTime(metrics.wait_time),
         request_success: formatCount(metrics.request_success),
         request_failed: formatCount(metrics.request_failed),

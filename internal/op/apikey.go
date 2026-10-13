@@ -4,25 +4,36 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"sync"
 
 	"github.com/bestruirui/octopus/internal/db"
 	"github.com/bestruirui/octopus/internal/model"
 	"github.com/bestruirui/octopus/internal/utils/cache"
+	"github.com/charmbracelet/log"
 )
 
 var apiKeyCache = cache.New[int, model.APIKey](16)
 var apiKeyIDMap = cache.New[string, int](16)
 
+// apiKeyMu 串行化缓存重建与增删改: 重建的空窗会让正常请求短暂 401,
+// 与删除并发时还可能用重建前的快照把已删除的令牌写回映射。
+var apiKeyMu sync.Mutex
+
 func APIKeyCreate(key *model.APIKey, ctx context.Context) error {
 	if err := db.GetDB().WithContext(ctx).Create(key).Error; err != nil {
 		return fmt.Errorf("failed to create API key: %w", err)
 	}
+	apiKeyMu.Lock()
+	defer apiKeyMu.Unlock()
 	apiKeyCache.Set(key.ID, *key)
 	apiKeyIDMap.Set(key.APIKey, key.ID)
 	return nil
 }
 
 func APIKeyUpdate(key *model.APIKey, ctx context.Context) error {
+	apiKeyMu.Lock()
+	defer apiKeyMu.Unlock()
+
 	existing, ok := apiKeyCache.Get(key.ID)
 	if !ok {
 		return fmt.Errorf("API key not found")
@@ -69,21 +80,28 @@ func APIKeyGetByAPIKey(apiKey string, ctx context.Context) (model.APIKey, error)
 }
 
 func APIKeyDelete(id int, ctx context.Context) error {
-	k := model.APIKey{
-		ID: id,
-	}
-	if err := StatsAPIKeyDel(id); err != nil {
-		return fmt.Errorf("failed to delete stats API key: %v", err)
-	}
-	result := db.GetDB().WithContext(ctx).Delete(&k)
-	if result.RowsAffected == 0 {
+	apiKeyMu.Lock()
+	defer apiKeyMu.Unlock()
+
+	// 从缓存取出真实令牌: 只按 ID 反查映射会得到空串, 删掉的是空键, 映射里旧令牌仍在。
+	cached, ok := apiKeyCache.Get(id)
+	if !ok {
 		return fmt.Errorf("API key not found")
 	}
+	result := db.GetDB().WithContext(ctx).Delete(&model.APIKey{ID: id})
 	if result.Error != nil {
 		return fmt.Errorf("failed to delete API key: %w", result.Error)
 	}
-	apiKeyCache.Del(k.ID)
-	apiKeyIDMap.Del(k.APIKey)
+	// 无论库里是否还有这一行都清缓存: 行可能已被其它途径删除, 缓存里的令牌不能继续通过校验。
+	apiKeyCache.Del(id)
+	apiKeyIDMap.Del(cached.APIKey)
+	if result.RowsAffected == 0 {
+		return fmt.Errorf("API key not found")
+	}
+	// 统计清理失败不影响删除结果, 记日志即可。
+	if err := StatsAPIKeyDel(id); err != nil {
+		log.Warnf("api key %d deleted but its stats cleanup failed: %v", id, err)
+	}
 	return nil
 }
 
@@ -92,6 +110,13 @@ func apiKeyRefreshCache(ctx context.Context) error {
 	if err := db.GetDB().WithContext(ctx).Find(&apiKeys).Error; err != nil {
 		return err
 	}
+
+	apiKeyMu.Lock()
+	defer apiKeyMu.Unlock()
+
+	// 先清空: 缓存没有 TTL, 已删除的令牌会一直留在映射里继续通过校验。
+	apiKeyCache.Clear()
+	apiKeyIDMap.Clear()
 	for _, apiKey := range apiKeys {
 		apiKeyCache.Set(apiKey.ID, apiKey)
 		apiKeyIDMap.Set(apiKey.APIKey, apiKey.ID)

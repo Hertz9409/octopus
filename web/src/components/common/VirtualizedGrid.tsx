@@ -108,12 +108,20 @@ export function VirtualizedGrid<T>({
         }
 
         const rowStartIndex = rowIndex * columnCount;
-        const firstItem = items[rowStartIndex];
-        if (!firstItem) return `row-empty-${rowIndex}`;
+        if (columnCount === 1) {
+            const item = items[rowStartIndex];
+            if (!item) return `row-empty-${rowIndex}`;
 
-        // Keep row keys stable across prepend/append updates (especially log stream updates),
-        // otherwise virtualizer measurements are constantly invalidated and spacing falls back to estimates.
-        return `row-${String(getItemKey(firstItem, rowStartIndex))}`;
+            // 单列布局(日志流)每行就是一条记录: 用记录自身的 key, 头部插入新记录时已有行不受影响。
+            return `row-${String(getItemKey(item, rowStartIndex))}`;
+        }
+        const rowEndIndex = Math.min(rowStartIndex + columnCount, items.length) - 1;
+        const lastItem = items[rowEndIndex];
+        if (!lastItem) return `row-empty-${rowIndex}`;
+
+        // 网格布局按行内最后一项派生 key: 追加时末行稳定, 头部插入仍会改变各行 key,
+        // 这是行分组本身的限制, 只能在列表布局里彻底避免。
+        return `row-${String(getItemKey(lastItem, rowEndIndex))}`;
     }, [hasFooterRow, itemRowCount, columnCount, items, getItemKey]);
 
     // eslint-disable-next-line react-hooks/incompatible-library

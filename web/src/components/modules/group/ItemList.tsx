@@ -156,6 +156,8 @@ function MemberItem({
                 {!group && (
                     <>
                         <IconButton
+                            // dnd.isDragging 是库给的拖拽快照字段, 不是 React ref。
+                            // eslint-disable-next-line react-hooks/refs
                             disabled={index === 0 || isRemoving || dnd.isDragging}
                             onClick={(event) => {
                                 event.stopPropagation();
@@ -166,6 +168,7 @@ function MemberItem({
                             <ArrowUp className="size-3" />
                         </IconButton>
                         <IconButton
+                            // eslint-disable-next-line react-hooks/refs
                             disabled={index === members.length - 1 || isRemoving || dnd.isDragging}
                             onClick={(event) => {
                                 event.stopPropagation();

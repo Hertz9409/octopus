@@ -15,6 +15,10 @@ var settingCache = cache.New[model.SettingKey, string](16)
 func SettingList(ctx context.Context) ([]model.Setting, error) {
 	settings := make([]model.Setting, 0, settingCache.Len())
 	for key, value := range settingCache.GetAll() {
+		// 会话签名密钥只留在服务端: 拿到它就能离线伪造任意会话令牌。
+		if key == model.SettingKeyJWTSecret {
+			continue
+		}
 		settings = append(settings, model.Setting{
 			Key:   key,
 			Value: value,

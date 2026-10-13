@@ -14,7 +14,6 @@ type DBDump struct {
 	ChannelGrants []ChannelGrant `json:"channel_grants,omitempty"` // 渠道授权数据, 含统计。
 	Groups        []Group        `json:"groups,omitempty"`         // 分组数据。
 	GroupItems    []GroupItem    `json:"group_items,omitempty"`    // 分组成员数据。
-	LLMInfos      []LLMInfo      `json:"llm_infos,omitempty"`      // 模型价格数据。
 	APIKeys       []APIKey       `json:"api_keys,omitempty"`       // API Key 数据。
 	Settings      []Setting      `json:"settings,omitempty"`       // 系统设置数据。
 

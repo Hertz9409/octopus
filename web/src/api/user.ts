@@ -92,14 +92,15 @@ export const useAuthStore = create<AuthState>()(
                     token: null,
                     isLoading: false
                 });
-                if (typeof document !== 'undefined') {
-                    const cookiePath = new URL('./', document.baseURI).pathname; // 当前应用所在目录对应的 Cookie 路径。
-                    document.cookie = `auth=; Max-Age=0; Path=${cookiePath}; SameSite=Lax`;
-                    // 反向代理重写 Cookie Path 时也可省略目录末尾的斜杠。
-                    if (cookiePath !== '/') {
-                        document.cookie = `auth=; Max-Age=0; Path=${cookiePath.slice(0, -1)}; SameSite=Lax`;
-                    }
-                }
+                // 会话 Cookie 是 HttpOnly, 脚本删不掉, 交给服务端清除。
+                // 带上 JSON 空体: 服务端要求 JSON 请求, 跨站表单无法伪造这个 Content-Type。
+                void apiRequest('/api/v1/user/logout', {
+                    method: 'POST',
+                    body: {},
+                    dispatchUnauthorized: false
+                }).catch(() => {
+                    // 服务端不可达时本地状态已经登出, 忽略清理失败。
+                });
             }
         }),
         {

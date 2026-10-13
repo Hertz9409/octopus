@@ -70,5 +70,10 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
         }
         throw new ApiError(response.status, data?.message || `${translate('common.requestFailed')} (${response.status})`);
     }
+    // 200 且没有 data 字段时: 本服务的空响应会省略该字段(Success(c, nil) 带 omitempty),
+    // 只有连 code 都不是数字的外部 JSON(例如反代返回的错误体)才按失败处理。
+    if (data && typeof data === 'object' && !('data' in data) && typeof (data as { code?: unknown }).code !== 'number') {
+        throw new ApiError(response.status, translate('common.requestFailed'));
+    }
     return data?.data as T;
 }

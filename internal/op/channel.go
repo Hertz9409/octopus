@@ -85,11 +85,26 @@ func ChannelCreate(detail *model.ChannelDetail, ctx context.Context) (*model.Cha
 
 	channelCache.Set(channel.ID, channel)
 	// 凭据, 模型与授权的主键都在事务内分配, 此刻只在库里; 重载子表缓存以让授权候选与转发都能查到。
-	if err := reloadChannelChildren(ctx, channel.ID); err != nil {
-		return nil, err
-	}
+	// 刷新失败不报错(数据已提交, 报错会让界面以为没保存成功), 但要重试并留下错误日志。
+	retryCacheRefresh(fmt.Sprintf("channel %d cache reload", channel.ID), func() error {
+		return reloadChannelChildren(ctx, channel.ID)
+	})
 	created := channelDetail(channel)
 	return &created, nil
+}
+
+// retryCacheRefresh 执行一次缓存刷新, 失败时立刻重试一次。
+// 数据已经提交, 失败不回给调用方; 但缓存陈旧会让刚撤销的凭据继续参与转发, 或让新渠道到重启前不可见,
+// 所以除了告警还要重试, 并在两次都失败时留下明确的错误。
+func retryCacheRefresh(what string, refresh func() error) {
+	err := refresh()
+	if err == nil {
+		return
+	}
+	log.Errorf("%s failed, retrying: %v", what, err)
+	if err := refresh(); err != nil {
+		log.Errorf("%s failed twice, cache stays stale until restart: %v", what, err)
+	}
 }
 
 // ChannelUpdate 按提交的完整配置整体替换渠道及其凭据, 模型与授权, 返回刷新后的配置。
@@ -128,12 +143,13 @@ func ChannelUpdate(detail *model.ChannelDetail, ctx context.Context) (*model.Cha
 	channelStatsNeedUpdateLock.Unlock()
 
 	// 凭据, 模型与授权的增删都会改变可选路由集合, 重载该渠道的三类缓存并刷新分组。
-	if err := reloadChannelChildren(ctx, detail.ID); err != nil {
-		return nil, err
-	}
-	if err := groupRefreshCache(ctx); err != nil {
-		return nil, fmt.Errorf("failed to refresh groups: %w", err)
-	}
+	// 刷新失败只记日志: 配置已经提交, 报错会让用户以为没保存成功。
+	retryCacheRefresh(fmt.Sprintf("channel %d cache reload", detail.ID), func() error {
+		return reloadChannelChildren(ctx, detail.ID)
+	})
+	retryCacheRefresh(fmt.Sprintf("channel %d group refresh", detail.ID), func() error {
+		return groupRefreshCache(ctx)
+	})
 	updated := channelDetail(channel)
 	return &updated, nil
 }

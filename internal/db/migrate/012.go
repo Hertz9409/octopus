@@ -38,7 +38,10 @@ func migrateAPIKeySupportedModels(db *gorm.DB) error {
 
 	for _, row := range rows {
 		value := strings.TrimSpace(row.SupportedModels)
-		if strings.HasPrefix(value, "[") {
+		// 只有能按 JSON 数组解析出来的值才算已迁移: 只看首字符会把形如 "[a],b" 的旧值跳过,
+		// 之后任何一次按 JSON 读取都会整表失败。
+		var migrated []string
+		if err := json.Unmarshal([]byte(value), &migrated); err == nil {
 			continue
 		}
 		names := make([]string, 0)

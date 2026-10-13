@@ -60,8 +60,6 @@ func InitDB(dbType, dsn string, debug bool) error {
 		&model.ChannelGrant{},
 		&model.Group{},
 		&model.GroupItem{},
-		&model.LLMInfo{},
-		&model.CatalogModel{},
 		&model.APIKey{},
 		&model.Setting{},
 		&model.StatsTotal{},

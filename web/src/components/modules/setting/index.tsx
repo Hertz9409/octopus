@@ -1,7 +1,6 @@
 import { SettingAppearance } from './Appearance';
 import { SettingSystem } from './System';
 import { SettingAPIKey } from './APIKey';
-import { SettingLLMPrice } from './LLMPrice';
 import { SettingAccount } from './Account';
 import { SettingInfo } from './Info';
 import { SettingLog } from './Log';
@@ -17,7 +16,6 @@ export function Setting() {
                 <SettingAccount />
                 <SettingSystem />
                 <SettingLog />
-                <SettingLLMPrice />
                 <SettingAPIKey />
                 <SettingBackup />
             </div>

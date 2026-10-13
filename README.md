@@ -15,12 +15,11 @@
 
 - 🔀 **Multi-Channel Aggregation** - Connect multiple LLM provider channels with unified management
 - 🔄 **Protocol Conversion** - Seamless conversion between OpenAI Chat / OpenAI Responses / Anthropic API formats
-- 💰 **Price Sync** - Automatic model pricing updates
 - 🔃 **Model Sync** - Automatic synchronization of available model lists with channels
 - 🛡️ **Automatic Failover** - Automatically switches to an available channel when an upstream channel fails
 - 🔍 **Real-Time End-to-End Request Visualization** - Watch the complete request path in the frontend from the moment the client sends it
 - 🚧 **Upstream Error Shielding** - Intercept all upstream errors to keep agent tasks running without interruption
-- 📊 **Analytics** - Comprehensive request statistics, token consumption, and cost tracking
+- 📊 **Analytics** - Comprehensive request statistics and token consumption
 - 🎨 **Elegant UI** - Clean and beautiful web management panel
 - 📦 **Lightweight Single-Binary Deployment** - Run as a single binary with no external runtime dependencies
 - 🗄️ **Multi-Database Support** - Support for SQLite, MySQL, PostgreSQL
@@ -186,12 +185,10 @@ All configuration options can be overridden via environment variables using the 
 <td><img src="web/public/screenshot/desktop-group.png" alt="Group" width="400"></td>
 </tr>
 <tr>
-<td align="center"><b>Price Management</b></td>
 <td align="center"><b>Logs</b></td>
 <td align="center"><b>Settings</b></td>
 </tr>
 <tr>
-<td><img src="web/public/screenshot/desktop-price.png" alt="Price Management" width="400"></td>
 <td><img src="web/public/screenshot/desktop-log.png" alt="Logs" width="400"></td>
 <td><img src="web/public/screenshot/desktop-setting.png" alt="Settings" width="400"></td>
 </tr>
@@ -206,7 +203,6 @@ All configuration options can be overridden via environment variables using the 
 <td align="center"><b>Home</b></td>
 <td align="center"><b>Channel</b></td>
 <td align="center"><b>Group</b></td>
-<td align="center"><b>Price</b></td>
 <td align="center"><b>Logs</b></td>
 <td align="center"><b>Settings</b></td>
 </tr>
@@ -214,7 +210,6 @@ All configuration options can be overridden via environment variables using the 
 <td><img src="web/public/screenshot/mobile-home.png" alt="Mobile Home" width="140"></td>
 <td><img src="web/public/screenshot/mobile-channel.png" alt="Mobile Channel" width="140"></td>
 <td><img src="web/public/screenshot/mobile-group.png" alt="Mobile Group" width="140"></td>
-<td><img src="web/public/screenshot/mobile-price.png" alt="Mobile Price" width="140"></td>
 <td><img src="web/public/screenshot/mobile-log.png" alt="Mobile Logs" width="140"></td>
 <td><img src="web/public/screenshot/mobile-setting.png" alt="Mobile Settings" width="140"></td>
 </tr>
@@ -253,27 +248,6 @@ Groups aggregate multiple channels into a unified external model name.
 - When calling the API, set the `model` parameter to the group name
 
 > 💡 **Example**: Create a group named `gpt-4o`, add multiple providers' GPT-4o channels to it, then access all channels via a unified `model: gpt-4o`.
-
----
-
-### 💰 Price Management
-
-Manage model pricing information in the system.
-
-**Data Sources:**
-
-- The system periodically syncs model pricing data from [models.dev](https://github.com/sst/models.dev)
-- When creating a channel, if the channel contains models not in models.dev, the system automatically creates pricing information for those models on this page, so this page displays models that haven't had their prices fetched from upstream, allowing users to set prices manually
-- Manual creation of models that exist in models.dev is also supported for custom pricing
-
-**Price Priority:**
-
-| Priority | Source | Description |
-|:--------:|--------|-------------|
-| 🥇 High | This Page | Prices set by user in price management page |
-| 🥈 Low | models.dev | Auto-synced default prices |
-
-> 💡 **Tip**: To override a model's default price, simply set a custom price for it in the price management page.
 
 ---
 
@@ -365,6 +339,5 @@ Edit `~/.codex/auth.json`
 ## 🤝 Acknowledgments
 
 - 🙏 [looplj/axonhub](https://github.com/looplj/axonhub) - The LLM API adaptation module in this project is directly derived from this repository
-- 📊 [sst/models.dev](https://github.com/sst/models.dev) - AI model database providing model pricing data
 - 🇨🇳 [AtomGit](https://atomgit.com/bestruirui/octopus) - China-based code hosting
 - 💬 [Linux.do](https://linux.do/)

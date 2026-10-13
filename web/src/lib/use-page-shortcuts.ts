@@ -7,7 +7,6 @@ const PAGE_KEYS: Record<string, Page> = {
     h: 'home',
     c: 'channel',
     g: 'group',
-    m: 'model',
     l: 'log',
     s: 'setting',
 };

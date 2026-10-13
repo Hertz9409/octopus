@@ -91,9 +91,16 @@ export const GroupCard = memo(function GroupCard({ group, now }: { group: Group;
     const submitMembers = useCallback((next: SelectedMember[]) => {
         updateGroup.mutate(
             { id: group.id, items: next.map((m) => ({ channel_grant_id: m.channel_grant_id })) },
-            { onSuccess, onError },
+            {
+                onSuccess,
+                // 失败要把乐观改动撤回来: 否则界面留着服务端没有的排列, 下次成功提交会顺手把它写上去。
+                onError: (error: Error) => {
+                    setMembers([...displayMembers]);
+                    onError(error);
+                },
+            },
         );
-    }, [group.id, updateGroup, onSuccess, onError]);
+    }, [group.id, updateGroup, onSuccess, onError, displayMembers]);
 
     const handleRemoveMember = useCallback((id: string) => {
         submitMembers(members.filter((m) => m.id !== id));

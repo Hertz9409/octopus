@@ -9,7 +9,6 @@ import {
     apiKeyListQueryOptions,
     channelStatsQueryOptions,
     groupListQueryOptions,
-    modelListQueryOptions,
     statsDailyQueryOptions,
     statsHourlyQueryOptions,
     statsTotalQueryOptions,
@@ -30,14 +29,11 @@ const INIT_TIMEOUT_MS = 8000;
 const Home = lazy(() => retryImport(() => pageImports.home()).then((module) => ({ default: module.Home })));
 const Channel = lazy(() => retryImport(() => pageImports.channel()).then((module) => ({ default: module.Channel })));
 const Group = lazy(() => retryImport(() => pageImports.group()).then((module) => ({ default: module.Group })));
-const Model = lazy(() => retryImport(() => pageImports.model()).then((module) => ({ default: module.Model })));
-const Catalog = lazy(() => retryImport(() => pageImports.catalog()).then((module) => ({ default: module.Catalog })));
 const Log = lazy(() => retryImport(() => pageImports.log()).then((module) => ({ default: module.Log })));
 const Setting = lazy(() => retryImport(() => pageImports.setting()).then((module) => ({ default: module.Setting })));
 const HomeActions = lazy(() => retryImport(() => pageImports.home()).then((module) => ({ default: module.HomeActions })));
 const ChannelActions = lazy(() => retryImport(() => pageImports.channel()).then((module) => ({ default: module.ChannelActions })));
 const GroupActions = lazy(() => retryImport(() => pageImports.group()).then((module) => ({ default: module.GroupActions })));
-const ModelActions = lazy(() => retryImport(() => pageImports.model()).then((module) => ({ default: module.ModelActions })));
 
 // InitialLoadingGate 在当前界面提交后淡出并移除 HTML 首屏加载动画。
 function InitialLoadingGate({ children }: { children: ReactNode }) {
@@ -117,7 +113,6 @@ export function AppContainer() {
                 queryClient.fetchQuery(apiKeyListQueryOptions),
                 queryClient.fetchQuery(channelStatsQueryOptions),
                 queryClient.fetchQuery(groupListQueryOptions),
-                queryClient.fetchQuery(modelListQueryOptions),
                 queryClient.fetchQuery(statsDailyQueryOptions),
                 queryClient.fetchQuery(statsHourlyQueryOptions),
                 queryClient.fetchQuery(statsTotalQueryOptions),
@@ -201,7 +196,6 @@ export function AppContainer() {
                         {visibleItem === 'home' && <HomeActions />}
                         {visibleItem === 'channel' && <ChannelActions />}
                         {visibleItem === 'group' && <GroupActions />}
-                        {visibleItem === 'model' && <ModelActions />}
                     </Suspense>
                 </ErrorBoundary>
             }
@@ -229,8 +223,6 @@ export function AppContainer() {
                             {visibleItem === 'home' && <Home />}
                             {visibleItem === 'channel' && <Channel />}
                             {visibleItem === 'group' && <Group />}
-                            {visibleItem === 'model' && <Model />}
-                            {visibleItem === 'catalog' && <Catalog />}
                             {visibleItem === 'log' && <Log />}
                             {visibleItem === 'setting' && <Setting />}
                         </motion.div>

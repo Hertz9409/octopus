@@ -25,11 +25,8 @@
         "requestCount": "請求次數",
         "timeConsumed": "消耗時間",
         "totalToken": "消耗詞元",
-        "totalCost": "消耗費用",
         "inputTokens": "輸入詞元",
-        "inputCost": "輸入費用",
         "outputTokens": "輸出詞元",
-        "outputCost": "輸出費用",
         "successRequests": "成功請求",
         "failedRequests": "失敗請求",
         "expireAt": "過期時間",
@@ -42,10 +39,8 @@
         "home": "主頁",
         "channel": "供應源",
         "group": "分組",
-        "model": "價格",
         "log": "日誌",
-        "setting": "設定",
-        "catalog": "模型庫"
+        "setting": "設定"
     },
     "toolbar": {
         "hideChannelName": "模糊渠道名稱",
@@ -70,11 +65,6 @@
                     "all": "全部分組",
                     "withMembers": "有成員",
                     "empty": "空分組"
-                },
-                "model": {
-                    "all": "全部模型",
-                    "priced": "已配置價格",
-                    "free": "未配置價格"
                 }
             }
         },
@@ -105,7 +95,6 @@
     },
     "home": {
         "metric": {
-            "cost": "金額",
             "count": "次數",
             "tokens": "詞元"
         },
@@ -113,7 +102,6 @@
             "requestCount": "請求次數",
             "waitTime": "消耗時間",
             "totalToken": "消耗詞元",
-            "totalCost": "消耗費用",
             "noData": "無數據"
         },
         "total": {
@@ -124,16 +112,12 @@
             "requestCount": "請求次數",
             "timeConsumed": "消耗時間",
             "totalToken": "消耗詞元",
-            "totalCost": "消耗費用",
             "inputTokens": "輸入詞元",
-            "inputCost": "輸入費用",
-            "outputTokens": "輸出詞元",
-            "outputCost": "輸出費用"
+            "outputTokens": "輸出詞元"
         },
         "chart": {
             "title": "趨勢",
             "totalRequests": "請求次數",
-            "totalCost": "消費金額",
             "totalTokens": "詞元消耗",
             "timePeriod": "時間週期",
             "period": {
@@ -207,15 +191,11 @@
         "apiKey": {
             "title": "API 金鑰",
             "empty": "暫無 API 金鑰",
-            "add": "新增金鑰",
             "loadFailed": "載入失敗",
             "form": {
                 "name": "名稱",
                 "value": "密鑰值",
                 "valuePlaceholder": "留空自動生成",
-                "maxCost": "最大金額",
-                "maxCostPlaceholder": "請輸入金額",
-                "unlimited": "無限制",
                 "expireAt": "過期日期",
                 "selectDate": "選擇日期",
                 "neverExpire": "永不過期",
@@ -232,8 +212,6 @@
                 "noData": "暫無統計數據",
                 "inputToken": "輸入詞元",
                 "outputToken": "輸出詞元",
-                "inputCost": "輸入費用",
-                "outputCost": "輸出費用",
                 "requestSuccess": "成功請求",
                 "requestFailed": "失敗請求"
             },
@@ -250,32 +228,6 @@
                 "description": "金鑰只在建立時顯示這一次，請立即複製保存。"
             },
             "expand": "放大面板"
-        },
-        "llmPrice": {
-            "title": "模型價格",
-            "updateInterval": {
-                "label": "自動更新間隔（小時）",
-                "placeholder": "請輸入間隔（小時）"
-            },
-            "manualUpdate": {
-                "label": "手動更新價格",
-                "button": "立即更新",
-                "updating": "更新中..."
-            },
-            "lastUpdate": "上次更新",
-            "neverUpdated": "從未更新",
-            "updateSuccess": "價格更新成功",
-            "updateFailed": "價格更新失敗",
-            "rebuild": {
-                "label": "重建價格資料",
-                "description": "重新匹配並清理模型價格\n會重置手動設定的價格",
-                "button": "重建",
-                "cancel": "取消",
-                "confirm": "確認重建",
-                "rebuilding": "重建中...",
-                "success": "價格資料重建成功，共處理 {count} 個模型",
-                "failed": "價格資料重建失敗"
-            }
         },
         "account": {
             "title": "帳戶設定",
@@ -344,7 +296,6 @@
         },
         "card": {
             "empty": "暫無規則",
-            "activate": "設為活動項",
             "cooling": "冷卻 {seconds}s",
             "affinity": "親和 {seconds}s",
             "emptyList": "還沒有分組"
@@ -388,44 +339,6 @@
         },
         "memberUnavailable": "該成員的供應源或憑證已停用"
     },
-    "model": {
-        "create": {
-            "name": "模型名稱",
-            "input": "輸入價格",
-            "output": "輸出價格",
-            "cacheRead": "快取讀取",
-            "cacheWrite": "快取寫入",
-            "cancel": "取消",
-            "submit": "建立",
-            "submitting": "建立中...",
-            "nameRequired": "請填寫模型名稱",
-            "invalidPrice": "價格必須是不小於 0 的數字"
-        },
-        "toast": {
-            "updated": "模型價格已更新",
-            "updateFailed": "更新失敗",
-            "deleted": "模型已刪除",
-            "deleteFailed": "刪除失敗",
-            "invalidPrice": "價格需填寫不小於 0 的數字"
-        },
-        "card": {
-            "inputCache": "輸入/快取",
-            "outputCache": "輸出/快取",
-            "edit": "編輯",
-            "delete": "刪除",
-            "emptyList": "還沒有模型"
-        },
-        "overlay": {
-            "cancel": "取消",
-            "deleting": "刪除中...",
-            "confirmDelete": "確認刪除",
-            "input": "輸入",
-            "output": "輸出",
-            "cacheRead": "快取讀取",
-            "cacheWrite": "快取寫入",
-            "save": "儲存"
-        }
-    },
     "log": {
         "list": {
             "empty": "暫無日誌",
@@ -464,7 +377,6 @@
     "channel": {
         "card": {
             "requestCount": "請求次數",
-            "totalCost": "總成本",
             "keyCount": "憑證",
             "model": "模型",
             "successRequests": "成功請求",
@@ -513,11 +425,9 @@
         "stats": {
             "totalRequests": "總請求",
             "totalToken": "總詞元",
-            "totalCost": "總成本",
             "avgWaitTime": "等待時間",
             "models": "模型",
             "noModels": "暫未選擇模型",
-            "sortByCost": "金額",
             "sortByCount": "次數",
             "sortByTokens": "詞元",
             "edit": "編輯",
@@ -581,76 +491,5 @@
             "clearAllModelsDescription": "將刪除 {count} 個模型及其全部授權，儲存後生效。",
             "clearAllModelsConfirm": "清空模型"
         }
-    },
-    "catalog": {
-        "rules": {
-            "title": "篩選規則",
-            "hint": "儲存後寫入設定, 供應源同步模型時生效。",
-            "enabled": "啟用規則",
-            "releaseDays": "發佈時間",
-            "releaseDaysAny": "不限",
-            "releaseDaysValue": "近 {days} 天",
-            "minContext": "上下文下限 (tokens)",
-            "requireToolCall": "只保留支援工具呼叫",
-            "dropDeprecated": "排除已棄用",
-            "unknownPolicy": "目錄外的模型",
-            "unknownKeep": "保留",
-            "unknownDrop": "丟棄",
-            "unknownHint": "中轉站常給自建模型名, 目錄裡查不到時按這裡處理。",
-            "save": "儲存規則",
-            "reset": "復原",
-            "saved": "規則已儲存",
-            "loading": "正在讀取設定...",
-            "settingsFailed": "設定讀取失敗, 規則暫時不能修改。",
-            "toggle": "篩選規則",
-            "unsaved": "未儲存",
-            "dirtyHint": "規則有未儲存的變更: 先儲存, 再套用到供應源。",
-            "saveFirst": "儲存規則"
-        },
-        "loading": "正在讀取模型庫...",
-        "summary": "保留 {kept} 個 · 供應源在售 {total} 個 · 目錄 {catalog} 條",
-        "empty": "還沒有可用的模型: 先到供應源頁同步模型列表。",
-        "unknownDeveloper": "其他",
-        "groupCount": "保留 {kept} / 共 {total}",
-        "selection": {
-            "all": "全選",
-            "none": "清除選擇"
-        },
-        "actions": {
-            "apply": "應用到供應源",
-            "generate": "產生分組 ({count})"
-        },
-        "groups": {
-            "confirmTitle": "產生模型分組？",
-            "confirmDescription": "為選中的 {count} 個模型各建一個分組, 分組名就是模型名 (用戶端請求用的名字); 成員用模型在供應源裡的全部原始寫法匹配, 帶供應商前綴或日期後綴也能覆蓋, 已存在的分組只補齊成員。",
-            "confirm": "產生分組",
-            "done": "新建 {created} 個分組, 補齊 {members} 個成員",
-            "doneFailed": "新建 {created} 個 · 已有 {reused} 個 · 失敗 {failed} 個 · 新增 {members} 個成員",
-            "doneReused": "新建 {created} 個 · 補齊 {reused} 個已有分組 · 新增 {members} 個成員",
-            "reportTitle": "本次結果",
-            "reportCreated": "已新建",
-            "reportReused": "已有分組",
-            "reportFailed": "失敗",
-            "reportMembers": "成員 +{count}",
-            "reportClose": "收合"
-        },
-        "variants": "{count} 種寫法",
-        "channels": "{count} 個供應源",
-        "capability": {
-            "toolCall": "工具呼叫"
-        },
-        "status": {
-            "deprecated": "已棄用",
-            "beta": "測試版",
-            "unknown": "目錄未收錄"
-        },
-        "reason": {
-            "unknown": "目錄未收錄",
-            "deprecated": "已棄用",
-            "tool_call": "不支援工具呼叫",
-            "context": "上下文不足",
-            "release": "發布過早"
-        },
-        "summaryUpdated": "目錄更新於 {time}"
     }
 }

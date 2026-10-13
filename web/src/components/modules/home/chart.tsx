@@ -4,7 +4,7 @@ import { useTranslations } from 'use-intl';
 import { useStatsDaily, useStatsHourly, type StatsMetricsFormatted } from '@/api/stats';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { AnimatedNumber } from '@/components/common/AnimatedNumber';
-import { formatCount, formatMoney } from '@/lib/utils';
+import { formatCount } from '@/lib/utils';
 import { useTheme } from '@/provider/theme';
 import { useHomeViewStore } from './store';
 import { MetricTabs } from './metric-tabs';
@@ -12,7 +12,7 @@ import { MetricTabs } from './metric-tabs';
 // 趋势图上的一个点。小时与每日两种粒度只用到这三项, 且两者取值方式一致, 故统一成同一形状。
 interface ChartPoint {
     label: string; // 横轴刻度, 小时粒度为 H:00, 每日粒度为 MM/DD。
-    stat: Pick<StatsMetricsFormatted, 'request_count' | 'total_cost' | 'total_token'>;
+    stat: Pick<StatsMetricsFormatted, 'request_count' | 'total_token'>;
 }
 
 // StatsChart 展示选定指标在选定周期内的趋势, 并汇总该周期的请求, 金额和词元。
@@ -43,18 +43,17 @@ export function StatsChart() {
 
     // 图表从首个有请求的点前一个开始, 避免开头一长段零值; 汇总仍按整个周期统计。
     const firstUsage = source.findIndex((item) => item.stat.request_count.raw > 0);
-    const metricField = metricType === 'cost' ? 'total_cost' : metricType === 'count' ? 'request_count' : 'total_token';
+    const metricField = metricType === 'count' ? 'request_count' : 'total_token';
     const chartData = source
         .slice(firstUsage === -1 ? Math.max(source.length - 1, 0) : Math.max(firstUsage - 1, 0))
         .map((item) => ({ date: item.label, value: item.stat[metricField].raw }));
 
     const chartColor = getComputedStyle(document.documentElement)
-        .getPropertyValue(metricType === 'cost' ? '--chart-1' : metricType === 'count' ? '--chart-2' : '--chart-3')
+        .getPropertyValue(metricType === 'count' ? '--chart-1' : '--chart-2')
         .trim();
     const periodLabel = { '1': t('period.today'), '7': t('period.last7Days'), '30': t('period.last30Days') }[period];
     const summary = [
         { label: t('totalRequests'), metric: formatCount(source.reduce((sum, item) => sum + item.stat.request_count.raw, 0)) },
-        { label: t('totalCost'), metric: formatMoney(source.reduce((sum, item) => sum + item.stat.total_cost.raw, 0)) },
         { label: t('totalTokens'), metric: formatCount(source.reduce((sum, item) => sum + item.stat.total_token.raw, 0)) },
     ];
 
@@ -108,7 +107,7 @@ export function StatsChart() {
                         tickLine={false}
                         axisLine={false}
                         tickFormatter={(value) => {
-                            const formatted = metricType === 'cost' ? formatMoney(value) : formatCount(value);
+                            const formatted = formatCount(value);
                             return `${formatted.formatted.value}${formatted.formatted.unit}`;
                         }}
                     />

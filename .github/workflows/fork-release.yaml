@@ -74,14 +74,6 @@ jobs:
           go-version-file: go.mod
           cache: true
 
-      - name: Setup Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: '3.13'
-
-      - name: Update price
-        run: python3 scripts/updatePrice.py
-
       - name: Build docker context
         run: bash scripts/fork/build-image.sh
         env:

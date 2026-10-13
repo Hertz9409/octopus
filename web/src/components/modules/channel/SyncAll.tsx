@@ -3,10 +3,9 @@ import { AlertTriangle, CheckCircle2, MinusCircle, RefreshCw, XCircle } from 'lu
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'use-intl';
 import { toast } from 'sonner';
-import { catalogModelsQueryOptions } from '@/api/catalog';
 import { useChannelStats } from '@/api/channel';
 import { errorMessage } from '@/api/client';
-import { groupListQueryOptions, modelListQueryOptions } from '@/api/queries';
+import { groupListQueryOptions } from '@/api/queries';
 import { cn } from '@/lib/utils';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -116,10 +115,7 @@ function SyncAllContent() {
     const start = async () => {
         await syncAllChannels(channels);
         queryClient.invalidateQueries({ queryKey: ['channels'] });
-        queryClient.invalidateQueries({ queryKey: modelListQueryOptions.queryKey });
         queryClient.invalidateQueries({ queryKey: groupListQueryOptions.queryKey });
-        // 模型库页面展示的就是各渠道的模型清单, 同步后必须一起失效, 否则它还是同步前的旧结果。
-        queryClient.invalidateQueries({ queryKey: catalogModelsQueryOptions.queryKey });
         const final = countByStatus(getSyncProgress().results);
         const summary = t('summary', final);
         if (final.failed > 0 || final.partial > 0) {

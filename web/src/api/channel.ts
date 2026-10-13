@@ -1,6 +1,6 @@
 import { queryOptions, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from './client';
-import { channelStatsQueryOptions, groupListQueryOptions, modelListQueryOptions } from './queries';
+import { channelStatsQueryOptions, groupListQueryOptions } from './queries';
 import { formatStatsMetrics, type StatsMetrics, type StatsMetricsFormatted } from './stats';
 
 // Protocol 是渠道支持的上游线协议位掩码，位值与后端 model.Protocol 一致，不可变更。
@@ -208,7 +208,6 @@ export function useCreateChannel() {
             apiRequest<ChannelDetail>('/api/v1/channel/create', { method: 'POST', body: data }),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['channels'] });
-            queryClient.invalidateQueries({ queryKey: modelListQueryOptions.queryKey });
         },
     });
 }
@@ -231,7 +230,6 @@ export function useUpdateChannel() {
             apiRequest<ChannelDetail>('/api/v1/channel/update', { method: 'POST', body: data }),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['channels'] });
-            queryClient.invalidateQueries({ queryKey: modelListQueryOptions.queryKey });
             queryClient.invalidateQueries({ queryKey: groupListQueryOptions.queryKey });
         },
     });
@@ -253,7 +251,6 @@ export function useDeleteChannel() {
             apiRequest<null>(`/api/v1/channel/delete/${id}`, { method: 'DELETE' }),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['channels'] });
-            queryClient.invalidateQueries({ queryKey: modelListQueryOptions.queryKey });
             queryClient.invalidateQueries({ queryKey: groupListQueryOptions.queryKey });
         },
     });

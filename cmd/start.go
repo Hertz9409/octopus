@@ -1,9 +1,8 @@
 package cmd
 
 import (
-	"context"
+	"fmt"
 
-	"github.com/bestruirui/octopus/internal/catalog"
 	"github.com/bestruirui/octopus/internal/conf"
 	"github.com/bestruirui/octopus/internal/db"
 	"github.com/bestruirui/octopus/internal/op"
@@ -19,46 +18,49 @@ var cfgFile string
 var startCmd = &cobra.Command{
 	Use:   "start",
 	Short: "Start " + conf.APP_NAME,
-	PreRun: func(cmd *cobra.Command, args []string) {
+	PreRunE: func(cmd *cobra.Command, args []string) error {
 		conf.PrintBanner()
-		conf.Load(cfgFile)
+		// 配置文件读错时不能静默退回默认值, 否则改错一个字符就会换个端口启动。
+		if err := conf.Load(cfgFile); err != nil {
+			return err
+		}
 		if level, err := log.ParseLevel(conf.AppConfig.Log.Level); err == nil {
 			log.SetLevel(level)
 		}
+		return nil
 	},
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		shutdown.Init(log.Default())
 		if err := db.InitDB(conf.AppConfig.Database.Type, conf.AppConfig.Database.Path, conf.IsDebug()); err != nil {
-			log.Errorf("database init error: %v", err)
-			return
+			return fmt.Errorf("database init error: %w", err)
 		}
 		shutdown.Register(db.Close)
 
 		if err := op.InitCache(); err != nil {
-			log.Errorf("cache init error: %v", err)
-			return
+			return fmt.Errorf("cache init error: %w", err)
 		}
 		shutdown.Register(op.SaveCache)
 
-		if err := op.UserInit(); err != nil {
-			log.Errorf("user init error: %v", err)
-			return
+		if err := op.AuthSecretInit(); err != nil {
+			return fmt.Errorf("auth secret init error: %w", err)
 		}
 
-		// 目录快照先读库, 首次网络更新之前模型库页面就能用。
-		if err := catalog.Load(context.Background()); err != nil {
-			log.Warnf("catalog load error: %v", err)
+		if err := op.UserInit(); err != nil {
+			return fmt.Errorf("user init error: %w", err)
 		}
 
 		if err := server.Start(); err != nil {
-			log.Errorf("server start error: %v", err)
-			return
+			return fmt.Errorf("server start error: %w", err)
 		}
 		shutdown.Register(server.Close)
 
 		task.Init()
 		go task.RUN()
+
+		// 收到信号后先停 HTTP 监听并等待在途请求收尾, 再执行其余清理(关闭顺序为注册的逆序)。
+		shutdown.Register(server.Shutdown)
 		shutdown.Listen()
+		return nil
 	},
 }
 

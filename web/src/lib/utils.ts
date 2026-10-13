@@ -21,13 +21,6 @@ export function formatCount(num: number | undefined): { raw: number, formatted: 
     formatted: formatNumber(num, [1000000000, 1000000, 1000, 1], ['', 'B', 'M', 'K', '', '']),
   };
 }
-export function formatMoney(num: number | undefined): { raw: number, formatted: { value: string, unit: string } } {
-  return {
-    raw: num ?? 0,
-    formatted: formatNumber(num, [1000000000, 1000000, 1000, 1], ['$', 'B$', 'M$', 'K$', '$', '$']),
-  };
-}
-
 export function formatTime(ms: number | undefined): { raw: number, formatted: { value: string, unit: string } } {
   return {
     raw: ms ?? 0,

@@ -150,7 +150,7 @@ func persistStatsSnapshots(
 		}
 		if result := dbConn.Model(&model.Channel{}).
 			Where("id = ?", channel.ID).
-			Select("input_token", "output_token", "input_cost", "output_cost", "wait_time", "request_success", "request_failed").
+			Select("input_token", "output_token", "wait_time", "request_success", "request_failed").
 			Updates(&channel); result.Error != nil {
 			return result.Error
 		}
@@ -163,7 +163,7 @@ func persistStatsSnapshots(
 		}
 		if result := dbConn.Model(&model.ChannelModel{}).
 			Where("id = ?", channelModel.ID).
-			Select("input_token", "output_token", "input_cost", "output_cost", "wait_time", "request_success", "request_failed").
+			Select("input_token", "output_token", "wait_time", "request_success", "request_failed").
 			Updates(&channelModel); result.Error != nil {
 			return result.Error
 		}
@@ -176,7 +176,7 @@ func persistStatsSnapshots(
 		}
 		if result := dbConn.Model(&model.ChannelKey{}).
 			Where("id = ?", channelKey.ID).
-			Select("input_token", "output_token", "input_cost", "output_cost", "wait_time", "request_success", "request_failed").
+			Select("input_token", "output_token", "wait_time", "request_success", "request_failed").
 			Updates(&channelKey); result.Error != nil {
 			return result.Error
 		}
@@ -325,10 +325,7 @@ func StatsAPIKeyUpdate(apiKeyID int, metrics model.StatsMetrics) error {
 
 func StatsAPIKeyDel(id int) error {
 	statsAPIKeyCacheNeedUpdateLock.Lock()
-	if _, ok := statsAPIKeyCache.Get(id); !ok {
-		statsAPIKeyCacheNeedUpdateLock.Unlock()
-		return nil
-	}
+	// 缓存里没有也要删库行: 库里的孤儿行会在下次导入备份时复活, 让已删凭据统计重新出现。
 	statsAPIKeyCache.Del(id)
 	delete(statsAPIKeyCacheNeedUpdate, id)
 	statsAPIKeyCacheNeedUpdateLock.Unlock()

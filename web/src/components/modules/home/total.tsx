@@ -7,7 +7,6 @@ import {
     Bot,
     ArrowUpFromLine,
     Rewind,
-    DollarSign,
     FastForward
 } from 'lucide-react';
 import { useTranslations } from 'use-intl';
@@ -33,7 +32,6 @@ export function Total() {
             headerIcon: ChartColumnBig,
             items: [
                 { label: t('totalToken'), metric: stats?.total_token, icon: Bot, bgColor: 'bg-chart-1/10' },
-                { label: t('totalCost'), metric: stats?.total_cost, icon: DollarSign, bgColor: 'bg-chart-2/10' },
             ],
         },
         {
@@ -41,7 +39,6 @@ export function Total() {
             headerIcon: ArrowDownToLine,
             items: [
                 { label: t('inputTokens'), metric: stats?.input_token, icon: Rewind, bgColor: 'bg-chart-3/10' },
-                { label: t('inputCost'), metric: stats?.input_cost, icon: DollarSign, bgColor: 'bg-chart-3/10' },
             ],
         },
         {
@@ -49,7 +46,6 @@ export function Total() {
             headerIcon: ArrowUpFromLine,
             items: [
                 { label: t('outputTokens'), metric: stats?.output_token, icon: FastForward, bgColor: 'bg-chart-4/10' },
-                { label: t('outputCost'), metric: stats?.output_cost, icon: DollarSign, bgColor: 'bg-chart-4/10' },
             ],
         },
     ];

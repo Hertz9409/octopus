@@ -23,6 +23,36 @@ import (
 	"github.com/tidwall/sjson"
 )
 
+// preRoundWaitBudget 是「进入轮次之前」等待可用成员的总预算: 分组为空、成员失效或授权缺失时,
+// 超出预算就以明确错误结束请求, 而不是让客户端永远转圈。
+const preRoundWaitBudget = time.Minute
+
+// errNoAvailableMember 用于在没有可用成员时给出可读的失败原因。
+var errNoAvailableMember = errors.New("no available channel member for this model")
+
+// closeStreamResult 释放上游事件流与渠道专用代理的独占连接池, 供提前返回的路径复用。
+func closeStreamResult(result *upstreamResponse) {
+	if result == nil {
+		return
+	}
+	if result.events != nil {
+		result.events.Close()
+	}
+	if result.closeIdle != nil {
+		result.closeIdle()
+	}
+}
+
+// streamIdleTimeout 是流式响应提交后的空闲上限: 此时响应已在途, 靠事件间隔兜底,
+// 与「首事件超时」不同, 给首事件超时的三倍余量且不低于 90 秒, 避免思考时间长的模型被中途切断。
+func streamIdleTimeout(group model.Group) time.Duration {
+	idle := 3 * time.Duration(group.RelayConfig.MemberStreamFirstEventTimeoutSeconds) * time.Second
+	if idle < 90*time.Second {
+		return 90 * time.Second
+	}
+	return idle
+}
+
 // Forward 按客户端协议承载一个请求的完整转发过程: 解析请求, 定位分组, 循环选目标请求上游, 直至提交响应或请求结束。
 func Forward(format llm.APIFormat) gin.HandlerFunc {
 	// 客户端协议同时定出入站转换器和请求协议位: 后者随请求状态推给界面, 也是每轮选择上游协议的首选。
@@ -83,6 +113,29 @@ func Forward(format llm.APIFormat) gin.HandlerFunc {
 		ctx := request.requestCtx
 		failedItemID := 0 // 当前累计连续失败次数的成员 ID。
 		failures := 0     // 该成员包含首次请求的连续失败次数。
+		// countFailure 累计某成员在本请求内的连续失败次数, 成员改变时重新计数。
+		countFailure := func(itemID int) int {
+			if failedItemID == itemID {
+				failures++
+			} else {
+				failedItemID = itemID
+				failures = 1
+			}
+			return failures
+		}
+
+		// 没有可用成员、或成员指向的授权与渠道缺失时, 无限静默重试会让客户端一直转圈却看不到任何错误。
+		// 给进入轮次之前的等待设总预算, 超预算以明确错误结束请求。
+		waitDeadline := time.Now().Add(preRoundWaitBudget)
+		waitForMember := func(seconds int) bool {
+			if time.Now().After(waitDeadline) {
+				request.markFailed(errNoAvailableMember, "", nil)
+				// 成员迟迟不可用属于服务端暂时不可用, 与请求本身不合法区分开。
+				rejectRequestStatus(c, inbound, errNoAvailableMember, http.StatusServiceUnavailable)
+				return false
+			}
+			return request.wait(ctx, seconds)
+		}
 
 		for {
 			if ctx.Err() != nil {
@@ -93,7 +146,7 @@ func Forward(format llm.APIFormat) gin.HandlerFunc {
 			// 分组配置和成员随时可改, 故每轮重新读取; 分组被删除时等待它重新出现。
 			group, err = op.GroupGetByName(metadata.Model)
 			if err != nil {
-				if !request.wait(ctx, model.DefaultGroupRelayConfig().MemberRetryIntervalSeconds) {
+				if !waitForMember(model.DefaultGroupRelayConfig().MemberRetryIntervalSeconds) {
 					return
 				}
 				continue
@@ -103,7 +156,7 @@ func Forward(format llm.APIFormat) gin.HandlerFunc {
 			// 没有目标时等待重新选择, 期间人工切换渠道, 补齐成员或成员冷却到期即可让请求继续。
 			item := pickGroupItem(group)
 			if item.ID == 0 {
-				if !request.wait(ctx, group.RelayConfig.MemberRetryIntervalSeconds) {
+				if !waitForMember(group.RelayConfig.MemberRetryIntervalSeconds) {
 					return
 				}
 				continue
@@ -113,7 +166,13 @@ func Forward(format llm.APIFormat) gin.HandlerFunc {
 			// ChannelGrantGet 一次校验齐这几种情况, 取到的授权必然可直接转发, 无需再逐项检查。
 			grant, err := op.ChannelGrantGet(item.ChannelGrantID)
 			if err != nil {
-				if !request.wait(ctx, group.RelayConfig.MemberRetryIntervalSeconds) {
+				// 该成员当前不可用: 计入连续失败以便达到阈值后进入冷却, 避免反复选中同一个坏成员。
+				if recordRouteFailure(group, item.ID, countFailure(item.ID)) {
+					continue
+				}
+				// 未达冷却阈值时只归还可能占用的探测名额。
+				releaseRouteProbe(group, item.ID)
+				if !waitForMember(group.RelayConfig.MemberRetryIntervalSeconds) {
 					return
 				}
 				continue
@@ -124,7 +183,11 @@ func Forward(format llm.APIFormat) gin.HandlerFunc {
 			// 成员指向的渠道已被删除时同样等待, 该成员可能很快被改回可用渠道。
 			channel, err := op.ChannelGet(channelModel.ChannelID)
 			if err != nil {
-				if !request.wait(ctx, group.RelayConfig.MemberRetryIntervalSeconds) {
+				if recordRouteFailure(group, item.ID, countFailure(item.ID)) {
+					continue
+				}
+				releaseRouteProbe(group, item.ID)
+				if !waitForMember(group.RelayConfig.MemberRetryIntervalSeconds) {
 					return
 				}
 				continue
@@ -185,15 +248,11 @@ func Forward(format llm.APIFormat) gin.HandlerFunc {
 				if !timeoutTimer.Stop() {
 					cancelRoundCause(timeoutErr)
 				}
-				if context.Cause(roundCtx) == timeoutErr {
+				// 计时器恰在成功返回与 Stop 之间到期时不能把已拿到的响应丢掉, 只在确实失败时按超时处理。
+				if err != nil && context.Cause(roundCtx) == timeoutErr {
 					err = timeoutErr
 					// 超时与响应返回同时发生时舍弃尚未提交的流结果, 避免把超时误记为成功。
-					if result != nil && result.events != nil {
-						result.events.Close()
-						if result.closeIdle != nil {
-							result.closeIdle()
-						}
-					}
+					closeStreamResult(result)
 				}
 			}
 
@@ -203,30 +262,27 @@ func Forward(format llm.APIFormat) gin.HandlerFunc {
 				// 父上下文结束说明客户端已经取消, 归还探测占用并以取消终态结束请求。
 				if ctx.Err() != nil {
 					releaseRouteProbe(group, item.ID)
+					closeStreamResult(result)
 					request.markCanceled(ctx.Err(), "", nil)
 					return
 				}
 				// 仅人工中止本轮时不计失败也不等待; 响应超时属于真实失败并消耗尝试次数。
 				if context.Cause(roundCtx) == context.Canceled {
 					releaseRouteProbe(group, item.ID)
+					closeStreamResult(result)
 					continue
 				}
 				cancelRound()
+				// 失败的上游响应可能仍持有流与独占连接池, 换目标前先释放。
+				closeStreamResult(result)
 				// 本轮真实失败只计入当前渠道和成员, 客户端取消与人工中止不计为渠道故障。
 				metrics := model.StatsMetrics{WaitTime: time.Since(roundStartedAt).Milliseconds(), RequestFailed: 1}
 				_ = op.ChannelStatsUpdate(channel.ID, metrics)
 				_ = op.ChannelModelStatsUpdate(channelModel.ID, metrics)
 				_ = op.ChannelKeyStatsUpdate(channelKey.ID, metrics)
 
-				// 成员改变时重新开始累计该成员在本请求内的连续失败次数。
-				if failedItemID == item.ID {
-					failures++
-				} else {
-					failedItemID = item.ID
-					failures = 1
-				}
 				// 达到总尝试次数时成员进入冷却并立即重新选路, 否则等待后重试。
-				if recordRouteFailure(group, item.ID, failures) {
+				if recordRouteFailure(group, item.ID, countFailure(item.ID)) {
 					continue
 				}
 				if !request.wait(ctx, group.RelayConfig.MemberRetryIntervalSeconds) {
@@ -239,12 +295,11 @@ func Forward(format llm.APIFormat) gin.HandlerFunc {
 			// 请求级取消可能与上游成功同时到达, 此时不应提交响应或继续重试。
 			if ctx.Err() != nil {
 				releaseRouteProbe(group, item.ID)
+				closeStreamResult(result)
 				request.markCanceled(ctx.Err(), "", result.usage)
 				return
 			}
 			roundWaitTime := time.Since(roundStartedAt).Milliseconds() // 流式响应统计到启动事件可以提交为止。
-			// 上游成功后解除该成员的冷却与探测占用, 并按路由配置开始亲和。
-			recordRouteSuccess(group, item.ID)
 			// 同协议透传时原样返回上游响应头; 跨协议响应没有需要透传的响应头。
 			for key, values := range result.header {
 				c.Writer.Header()[key] = values
@@ -257,7 +312,7 @@ func Forward(format llm.APIFormat) gin.HandlerFunc {
 					c.Header("Content-Type", "application/json")
 				}
 				// 非流式响应已有完整用量, 本轮渠道和成员统计可在提交前一次完成。
-				metrics := usageMetrics(channelModel.Name, result.usage)
+				metrics := usageMetrics(result.usage)
 				metrics.WaitTime = roundWaitTime
 				metrics.RequestSuccess = 1
 				_ = op.ChannelStatsUpdate(channel.ID, metrics)
@@ -269,13 +324,20 @@ func Forward(format llm.APIFormat) gin.HandlerFunc {
 					err = io.ErrShortWrite
 				}
 				if err != nil {
+					closeStreamResult(result)
 					if ctx.Err() != nil {
+						// 客户端已经断开: 本轮没有产出结论, 归还探测占用即可。
+						releaseRouteProbe(group, item.ID)
 						request.markCanceled(ctx.Err(), string(result.body), result.usage)
 					} else {
+						// 响应已提交但没写成功, 对该成员仍是一次真实失败, 否则探测名额会永久占住。
+						recordRouteFailure(group, item.ID, countFailure(item.ID))
 						request.markFailed(err, string(result.body), result.usage)
 					}
 					return
 				}
+				// 写入客户端成功后才算该成员交付成功: 客户端断开不该被记成正常。
+				recordRouteSuccess(group, item.ID)
 				request.markSucceeded(string(result.body), result.usage)
 				return
 			}
@@ -287,6 +349,13 @@ func Forward(format llm.APIFormat) gin.HandlerFunc {
 			}
 			var encoded bytes.Buffer
 			var chunks []*httpclient.StreamEvent
+			// 首帧提交后不再有超时兜底, 上游中途不再产出会把客户端无限挂住;
+			// 每收到一个事件重置空闲计时, 超时取消本轮上下文让阻塞的读取立即返回。
+			idleErr := errors.New("upstream stream idle timeout")
+			idleTimeout := streamIdleTimeout(group)
+			idleTimer := time.AfterFunc(idleTimeout, func() {
+				cancelRoundCause(idleErr)
+			})
 			event := result.first
 			last := result.last // 已转发的最后一个事件是否已按客户端协议结束整个响应流。
 			committed := false
@@ -318,12 +387,24 @@ func Forward(format llm.APIFormat) gin.HandlerFunc {
 					break
 				}
 				if !result.events.Next() {
-					err = result.events.Err()
+					// 终态事件之前流就结束(解码器遇到 EOF 只返回 false 且 err 为 nil)时半截响应不能算成功,
+					// 与首事件阶段同一口径判为流不完整。
+					if nextErr := result.events.Err(); nextErr != nil {
+						err = nextErr
+					} else {
+						err = llm.ErrStreamIncomplete
+					}
 					break
 				}
 				event = result.events.Current()
+				idleTimer.Reset(idleTimeout)
 				// 已提交的响应不能再换目标重试, 结束事件自身携带的失败原样转发给客户端, 并在转发后作为本请求终态。
 				last, err = inspectStreamEvent(format, event)
+			}
+			idleTimer.Stop()
+			// 空闲超时表现为上下文取消, 统一成明确的超时错误便于统计与展示; 已成功的流不受影响。
+			if err != nil && context.Cause(roundCtx) == idleErr {
+				err = idleErr
 			}
 			request.finishStream()
 			result.events.Close()
@@ -338,7 +419,11 @@ func Forward(format llm.APIFormat) gin.HandlerFunc {
 				result.usage = meta.Usage
 			}
 			// 流式响应结束并聚合出用量后, 按最终结果完成本轮渠道和成员统计。
-			metrics := usageMetrics(channelModel.Name, result.usage)
+			if err == nil {
+				// 整条流都成功写给客户端后才算该成员交付成功。
+				recordRouteSuccess(group, item.ID)
+			}
+			metrics := usageMetrics(result.usage)
 			metrics.WaitTime = roundWaitTime
 			if err == nil {
 				metrics.RequestSuccess = 1
@@ -350,8 +435,12 @@ func Forward(format llm.APIFormat) gin.HandlerFunc {
 			_ = op.ChannelKeyStatsUpdate(channelKey.ID, metrics)
 			if err != nil {
 				if ctx.Err() != nil {
+					// 客户端断开时本轮没有产出结论, 只归还探测占用。
+					releaseRouteProbe(group, item.ID)
 					request.markCanceled(ctx.Err(), string(responseBody), result.usage)
 				} else {
+					// 已提交的流中途失败同样要结清该成员, 否则探测名额会永久占住。
+					recordRouteFailure(group, item.ID, countFailure(item.ID))
 					request.markFailed(err, string(responseBody), result.usage)
 				}
 				return
@@ -364,9 +453,18 @@ func Forward(format llm.APIFormat) gin.HandlerFunc {
 
 // rejectRequest 以客户端协议的错误格式返回请求级失败, 用于尚未登记状态因而无需定稿的请求。
 func rejectRequest(c *gin.Context, inbound transformer.Inbound, err error) {
+	rejectRequestStatus(c, inbound, err, http.StatusBadRequest)
+}
+
+// rejectRequestStatus 同上, 用于需要区分「请求不合法」与「暂时没有可用渠道」的场景。
+func rejectRequestStatus(c *gin.Context, inbound transformer.Inbound, err error, status int) {
+	detailType := "invalid_request_error"
+	if status >= http.StatusInternalServerError {
+		detailType = "server_error"
+	}
 	response := inbound.TransformError(c.Request.Context(), &llm.ResponseError{
-		StatusCode: http.StatusBadRequest,
-		Detail:     llm.ErrorDetail{Message: err.Error(), Type: "invalid_request_error"},
+		StatusCode: status,
+		Detail:     llm.ErrorDetail{Message: err.Error(), Type: detailType},
 	})
 	c.Data(response.StatusCode, "application/json", response.Body)
 	c.Abort()

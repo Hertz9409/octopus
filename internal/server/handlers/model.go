@@ -2,50 +2,16 @@ package handlers
 
 import (
 	"net/http"
-	"strings"
 
 	"github.com/bestruirui/octopus/internal/model"
 	"github.com/bestruirui/octopus/internal/op"
-	"github.com/bestruirui/octopus/internal/price"
 	"github.com/bestruirui/octopus/internal/server/middleware"
-	"github.com/bestruirui/octopus/internal/server/resp"
 	"github.com/bestruirui/octopus/internal/server/router"
 	"github.com/gin-gonic/gin"
 	"github.com/samber/lo"
 )
 
 func init() {
-	router.NewGroupRouter("/api/v1/model").
-		Use(middleware.Auth()).
-		Use(middleware.RequireJSON()).
-		AddRoute(
-			router.NewRoute("/list", http.MethodGet).
-				Handle(listLLM),
-		).
-		AddRoute(
-			router.NewRoute("/create", http.MethodPost).
-				Handle(createLLM),
-		).
-		AddRoute(
-			router.NewRoute("/update", http.MethodPost).
-				Handle(updateLLM),
-		).
-		AddRoute(
-			router.NewRoute("/delete", http.MethodPost).
-				Handle(deleteLLM),
-		).
-		AddRoute(
-			router.NewRoute("/update-price", http.MethodPost).
-				Handle(updateLLMPrice),
-		).
-		AddRoute(
-			router.NewRoute("/rebuild-price", http.MethodPost).
-				Handle(rebuildLLMPrice),
-		).
-		AddRoute(
-			router.NewRoute("/last-update-time", http.MethodGet).
-				Handle(getLastUpdateTime),
-		)
 	router.NewGroupRouter("/v1").
 		Use(middleware.APIKeyAuth()).
 		AddRoute(
@@ -99,103 +65,4 @@ func getModelList(c *gin.Context) {
 			"object":  "list",
 		})
 	}
-}
-
-func listLLM(c *gin.Context) {
-	resp.Success(c, op.LLMList())
-}
-
-// createLLM 校验并创建自定义模型价格。
-func createLLM(c *gin.Context) {
-	var model model.LLMInfo
-	if err := c.ShouldBindJSON(&model); err != nil {
-		resp.Error(c, http.StatusBadRequest, err.Error())
-		return
-	}
-	model.Name = strings.ToLower(strings.TrimSpace(model.Name))
-	if model.Name == "" {
-		resp.Error(c, http.StatusBadRequest, resp.ErrInvalidParam)
-		return
-	}
-	if err := op.LLMCreate(model, c.Request.Context()); err != nil {
-		resp.Error(c, http.StatusInternalServerError, err.Error())
-		return
-	}
-	resp.Success(c, model)
-}
-
-// updateLLM 校验并更新自定义模型价格。
-func updateLLM(c *gin.Context) {
-	var model model.LLMInfo
-	if err := c.ShouldBindJSON(&model); err != nil {
-		resp.Error(c, http.StatusBadRequest, err.Error())
-		return
-	}
-	model.Name = strings.ToLower(strings.TrimSpace(model.Name))
-	if model.Name == "" {
-		resp.Error(c, http.StatusBadRequest, resp.ErrInvalidParam)
-		return
-	}
-	if err := op.LLMUpdate(model, c.Request.Context()); err != nil {
-		resp.Error(c, http.StatusInternalServerError, err.Error())
-		return
-	}
-	resp.Success(c, model)
-}
-
-// deleteLLM 校验模型名并删除自定义模型价格。
-func deleteLLM(c *gin.Context) {
-	var req struct {
-		Name string `json:"name" binding:"required"`
-	}
-	if err := c.ShouldBindJSON(&req); err != nil {
-		resp.Error(c, http.StatusBadRequest, err.Error())
-		return
-	}
-	req.Name = strings.ToLower(strings.TrimSpace(req.Name))
-	if req.Name == "" {
-		resp.Error(c, http.StatusBadRequest, resp.ErrInvalidParam)
-		return
-	}
-	if err := op.LLMDelete(req.Name, c.Request.Context()); err != nil {
-		resp.Error(c, http.StatusInternalServerError, err.Error())
-		return
-	}
-	resp.Success(c, nil)
-}
-
-func updateLLMPrice(c *gin.Context) {
-	err := price.UpdateLLMPrice(c.Request.Context())
-	if err != nil {
-		resp.Error(c, http.StatusInternalServerError, err.Error())
-		return
-	}
-	resp.Success(c, nil)
-}
-
-// rebuildLLMPrice 清理幽灵模型并重新校准数据库中的剩余模型价格。
-func rebuildLLMPrice(c *gin.Context) {
-	ctx := c.Request.Context()
-	if err := op.LLMCleanupGhosts(ctx); err != nil {
-		resp.Error(c, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	llmInfos := op.LLMList()
-	for i := range llmInfos {
-		llmInfos[i].LLMPrice = model.LLMPrice{}
-		if modelPrice := price.GetLLMPrice(llmInfos[i].Name); modelPrice != nil {
-			llmInfos[i].LLMPrice = *modelPrice
-		}
-	}
-	if err := op.LLMBatchSave(llmInfos, ctx); err != nil {
-		resp.Error(c, http.StatusInternalServerError, err.Error())
-		return
-	}
-	resp.Success(c, gin.H{"count": len(llmInfos)})
-}
-
-func getLastUpdateTime(c *gin.Context) {
-	time := price.GetLastUpdateTime()
-	resp.Success(c, time)
 }

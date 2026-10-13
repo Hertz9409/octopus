@@ -31,7 +31,6 @@ export interface RelayLogOverview {
     group_id: number;
     api_key_name: string;
     usage: RelayUsage;
-    cost: number;
     output_chars: number;
     round: number;
     round_started_at: string;
@@ -74,6 +73,8 @@ export function useLogs() {
         source.onopen = () => {
             setError(null);
             setIsLoading(false);
+            // 服务端每次连上都会推全量快照: 先清空, 否则断线期间被清空/删除的记录会一直留在列表里。
+            setLogs([]);
         };
         source.addEventListener('log', (event) => {
             let next: RelayLogOverview;

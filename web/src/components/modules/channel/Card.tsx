@@ -6,7 +6,7 @@ import {
     MorphingDialogDescription,
 } from '@/components/ui/morphing-dialog';
 import { AnimatePresence, motion } from 'motion/react';
-import { CheckCircle2, DollarSign, KeyRound, Layers, MessageSquare, XCircle } from 'lucide-react';
+import { CheckCircle2, KeyRound, Layers, MessageSquare, XCircle } from 'lucide-react';
 import { type ChannelStatsFormatted, useEnableChannel } from '@/api/channel';
 import { usePageActionsStore } from '@/components/common/PageActions';
 import { ChannelStats } from './Stats';
@@ -34,13 +34,11 @@ export function Card({ channel }: { channel: ChannelStatsFormatted }) {
         { icon: <Layers className="size-4 shrink-0 text-primary" />, label: t('model'), value: channel.models.length },
         { icon: <CheckCircle2 className="size-4 shrink-0 text-emerald-500" />, label: t('successRequests'), value: metrics.request_success.formatted.value },
         { icon: <XCircle className="size-4 shrink-0 text-destructive" />, label: t('failedRequests'), value: metrics.request_failed.formatted.value },
-        { icon: <DollarSign className="size-4 shrink-0 text-primary" />, label: t('totalCost'), value: metrics.total_cost.formatted.value, unit: metrics.total_cost.formatted.unit },
     ];
 
     // 网格布局的统计项
     const gridMetrics = [
         { icon: <MessageSquare className="size-4 shrink-0 text-primary" />, label: t('requestCount'), metric: metrics.request_count },
-        { icon: <DollarSign className="size-4 shrink-0 text-primary" />, label: t('totalCost'), metric: metrics.total_cost },
     ];
 
     const handleEnableChange = (checked: boolean) => {
@@ -84,7 +82,7 @@ export function Card({ channel }: { channel: ChannelStatsFormatted }) {
                     </header>
 
                     {layout === 'list' ? (
-                        <dl className="grid grid-cols-2 gap-2 lg:grid-cols-6">
+                        <dl className="grid grid-cols-2 gap-2 lg:grid-cols-5">
                             {listMetrics.map(({ icon, label, value, unit }) => (
                                 <div key={label} className="rounded-2xl border border-border/70 bg-background/80 p-2">
                                     <dt className="mb-1 flex items-center gap-1.5 text-xs text-muted-foreground">

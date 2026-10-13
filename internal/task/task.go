@@ -2,6 +2,7 @@ package task
 
 import (
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/charmbracelet/log"
@@ -15,6 +16,7 @@ type taskEntry struct {
 	ticker     *time.Ticker
 	stopCh     chan struct{}
 	updateCh   chan time.Duration
+	running    atomic.Bool // 上一轮尚未结束时跳过本轮, 避免慢任务堆叠。
 }
 
 var (
@@ -95,7 +97,7 @@ func RUN() {
 func runTask(entry *taskEntry) {
 	// 根据配置决定是否在启动时立即执行
 	if entry.runOnStart {
-		go entry.fn()
+		entry.run()
 	}
 
 	entry.ticker = time.NewTicker(entry.interval)
@@ -104,7 +106,7 @@ func runTask(entry *taskEntry) {
 	for {
 		select {
 		case <-entry.ticker.C:
-			go entry.fn()
+			entry.run()
 		case newInterval := <-entry.updateCh:
 			entry.ticker.Stop()
 			entry.interval = newInterval
@@ -113,4 +115,16 @@ func runTask(entry *taskEntry) {
 			return
 		}
 	}
+}
+
+// run 执行一轮任务; 上一轮尚未结束时跳过, 慢任务(落库)叠在一起会互相覆盖统计。
+func (entry *taskEntry) run() {
+	if !entry.running.CompareAndSwap(false, true) {
+		log.Warnf("task %s still running, skipping this round", entry.name)
+		return
+	}
+	go func() {
+		defer entry.running.Store(false)
+		entry.fn()
+	}()
 }

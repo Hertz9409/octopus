@@ -25,11 +25,8 @@
         "requestCount": "Requests",
         "timeConsumed": "Time Consumed",
         "totalToken": "Tokens Used",
-        "totalCost": "Total Cost",
         "inputTokens": "Input Tokens",
-        "inputCost": "Input Cost",
         "outputTokens": "Output Tokens",
-        "outputCost": "Output Cost",
         "successRequests": "Successful",
         "failedRequests": "Failed",
         "expireAt": "Expires",
@@ -42,10 +39,8 @@
         "home": "Home",
         "channel": "Channel",
         "group": "Group",
-        "model": "Price",
         "log": "Log",
-        "setting": "Setting",
-        "catalog": "Catalog"
+        "setting": "Setting"
     },
     "toolbar": {
         "hideChannelName": "Blur channel names",
@@ -70,11 +65,6 @@
                     "all": "All groups",
                     "withMembers": "With members",
                     "empty": "Empty groups"
-                },
-                "model": {
-                    "all": "All models",
-                    "priced": "Pricing configured",
-                    "free": "Pricing not configured"
                 }
             }
         },
@@ -105,7 +95,6 @@
     },
     "home": {
         "metric": {
-            "cost": "Cost",
             "count": "Count",
             "tokens": "Tokens"
         },
@@ -113,7 +102,6 @@
             "requestCount": "Requests",
             "waitTime": "Time Consumed",
             "totalToken": "Tokens Used",
-            "totalCost": "Total Cost",
             "noData": "No Data"
         },
         "total": {
@@ -124,16 +112,12 @@
             "requestCount": "Requests",
             "timeConsumed": "Time Consumed",
             "totalToken": "Tokens Used",
-            "totalCost": "Total Cost",
             "inputTokens": "Input Tokens",
-            "inputCost": "Input Cost",
-            "outputTokens": "Output Tokens",
-            "outputCost": "Output Cost"
+            "outputTokens": "Output Tokens"
         },
         "chart": {
             "title": "Trend",
             "totalRequests": "Total Requests",
-            "totalCost": "Total Cost",
             "totalTokens": "Total Tokens",
             "timePeriod": "Time Period",
             "period": {
@@ -207,15 +191,11 @@
         "apiKey": {
             "title": "API Keys",
             "empty": "No API keys",
-            "add": "Add Key",
             "loadFailed": "Failed to load",
             "form": {
                 "name": "Name",
                 "value": "Key Value",
                 "valuePlaceholder": "Leave empty to generate",
-                "maxCost": "Max Cost",
-                "maxCostPlaceholder": "Enter amount",
-                "unlimited": "Unlimited",
                 "expireAt": "Expire Date",
                 "selectDate": "Select date",
                 "neverExpire": "Never Expire",
@@ -232,8 +212,6 @@
                 "noData": "No statistics available",
                 "inputToken": "Input Token",
                 "outputToken": "Output Token",
-                "inputCost": "Input Cost",
-                "outputCost": "Output Cost",
                 "requestSuccess": "Request Success",
                 "requestFailed": "Request Failed"
             },
@@ -250,32 +228,6 @@
                 "description": "This key is shown only once, copy it now."
             },
             "expand": "Expand panel"
-        },
-        "llmPrice": {
-            "title": "Model Pricing",
-            "updateInterval": {
-                "label": "Auto Update Interval (hours)",
-                "placeholder": "Enter interval in hours"
-            },
-            "manualUpdate": {
-                "label": "Manual Price Update",
-                "button": "Update Now",
-                "updating": "Updating..."
-            },
-            "lastUpdate": "Last Update",
-            "neverUpdated": "Never updated",
-            "updateSuccess": "Price updated successfully",
-            "updateFailed": "Failed to update price",
-            "rebuild": {
-                "label": "Rebuild price data",
-                "description": "Rematch and clean up model prices\nManually configured prices will be reset",
-                "button": "Rebuild",
-                "cancel": "Cancel",
-                "confirm": "Confirm rebuild",
-                "rebuilding": "Rebuilding...",
-                "success": "Price data rebuilt for {count} models",
-                "failed": "Failed to rebuild price data"
-            }
         },
         "account": {
             "title": "Account Settings",
@@ -344,7 +296,6 @@
         },
         "card": {
             "empty": "No rules",
-            "activate": "Set as active",
             "cooling": "Cooling {seconds}s",
             "affinity": "Affinity {seconds}s",
             "emptyList": "No groups yet"
@@ -388,44 +339,6 @@
         },
         "memberUnavailable": "This member is unavailable because its channel or credential is disabled"
     },
-    "model": {
-        "create": {
-            "name": "Model Name",
-            "input": "Input Price",
-            "output": "Output Price",
-            "cacheRead": "Cache Read",
-            "cacheWrite": "Cache Write",
-            "cancel": "Cancel",
-            "submit": "Create",
-            "submitting": "Creating...",
-            "nameRequired": "Enter a model name",
-            "invalidPrice": "Price must be a number of 0 or more"
-        },
-        "toast": {
-            "updated": "Model price updated",
-            "updateFailed": "Update failed",
-            "deleted": "Model deleted",
-            "deleteFailed": "Delete failed",
-            "invalidPrice": "Prices must be numbers no less than 0"
-        },
-        "card": {
-            "inputCache": "Input/Cache",
-            "outputCache": "Output/Cache",
-            "edit": "Edit",
-            "delete": "Delete",
-            "emptyList": "No models yet"
-        },
-        "overlay": {
-            "cancel": "Cancel",
-            "deleting": "Deleting...",
-            "confirmDelete": "Confirm Delete",
-            "input": "Input",
-            "output": "Output",
-            "cacheRead": "Cache Read",
-            "cacheWrite": "Cache Write",
-            "save": "Save"
-        }
-    },
     "log": {
         "list": {
             "empty": "No logs yet",
@@ -464,7 +377,6 @@
     "channel": {
         "card": {
             "requestCount": "Requests",
-            "totalCost": "Total Cost",
             "keyCount": "Credentials",
             "model": "Model",
             "successRequests": "Successful Requests",
@@ -513,11 +425,9 @@
         "stats": {
             "totalRequests": "Total Requests",
             "totalToken": "Total Tokens",
-            "totalCost": "Total Cost",
             "avgWaitTime": "Wait Time",
             "models": "Model",
             "noModels": "No models selected",
-            "sortByCost": "Cost",
             "sortByCount": "Count",
             "sortByTokens": "Tokens",
             "edit": "Edit",
@@ -581,76 +491,5 @@
             "clearAllModelsDescription": "Removes {count} models and all their grants; takes effect when you save.",
             "clearAllModelsConfirm": "Clear models"
         }
-    },
-    "catalog": {
-        "rules": {
-            "title": "Filter rules",
-            "hint": "Saved to settings; applied when channels sync their models.",
-            "enabled": "Enable rules",
-            "releaseDays": "Release date",
-            "releaseDaysAny": "Any",
-            "releaseDaysValue": "Last {days} days",
-            "minContext": "Minimum context (tokens)",
-            "requireToolCall": "Require tool calling",
-            "dropDeprecated": "Drop deprecated",
-            "unknownPolicy": "Models missing from the catalog",
-            "unknownKeep": "Keep",
-            "unknownDrop": "Drop",
-            "unknownHint": "Aggregators often expose custom names; this decides their fate.",
-            "save": "Save rules",
-            "reset": "Discard",
-            "saved": "Rules saved",
-            "loading": "Loading settings...",
-            "settingsFailed": "Failed to load settings, rules are read-only for now.",
-            "toggle": "Filter rules",
-            "unsaved": "Unsaved",
-            "dirtyHint": "Rules have unsaved changes: save them before applying to channels.",
-            "saveFirst": "Save rules"
-        },
-        "loading": "Loading the catalog...",
-        "summary": "{kept} kept · {total} in channels · {catalog} catalog entries",
-        "empty": "No models yet — sync a channel first.",
-        "unknownDeveloper": "Other",
-        "groupCount": "{kept} of {total}",
-        "selection": {
-            "all": "Select all",
-            "none": "Clear"
-        },
-        "actions": {
-            "apply": "Apply to channels",
-            "generate": "Create groups ({count})"
-        },
-        "groups": {
-            "confirmTitle": "Create model groups?",
-            "confirmDescription": "Create one group per selected model ({count}); the group name is the model name clients request. Members match every raw spelling used by your channels, so vendor prefixes and date suffixes are covered, and existing groups only get the new members appended.",
-            "confirm": "Create groups",
-            "done": "Created {created} groups, added {members} members",
-            "doneFailed": "created {created} · reused {reused} · failed {failed} · added {members} members",
-            "doneReused": "created {created} · filled {reused} existing groups · added {members} members",
-            "reportTitle": "This run",
-            "reportCreated": "created",
-            "reportReused": "existing group",
-            "reportFailed": "failed",
-            "reportMembers": "+{count} members",
-            "reportClose": "Hide"
-        },
-        "variants": "{count} spellings",
-        "channels": "{count} channels",
-        "capability": {
-            "toolCall": "Tool calling"
-        },
-        "status": {
-            "deprecated": "Deprecated",
-            "beta": "Beta",
-            "unknown": "Not in catalog"
-        },
-        "reason": {
-            "unknown": "Not in catalog",
-            "deprecated": "Deprecated",
-            "tool_call": "No tool calling",
-            "context": "Context too small",
-            "release": "Released too early"
-        },
-        "summaryUpdated": "catalog updated {time}"
     }
 }

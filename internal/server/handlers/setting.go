@@ -59,20 +59,16 @@ func setSetting(c *gin.Context) {
 		resp.Error(c, http.StatusBadRequest, err.Error())
 		return
 	}
+	// 会话签名密钥由服务端生成与轮换(改密时), 不接受外部写入。
+	if setting.Key == model.SettingKeyJWTSecret {
+		resp.Error(c, http.StatusBadRequest, "jwt secret is managed by the server")
+		return
+	}
 	if err := op.SettingSetString(setting.Key, setting.Value); err != nil {
 		resp.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 	switch setting.Key {
-	case model.SettingKeyModelInfoUpdateInterval:
-		hours, err := strconv.Atoi(setting.Value)
-		if err != nil {
-			resp.Error(c, http.StatusBadRequest, err.Error())
-			return
-		}
-		if !task.Update(string(setting.Key), time.Duration(hours)*time.Hour) {
-			log.Errorf("task %s not rescheduled, the new interval applies after restart", setting.Key)
-		}
 	case model.SettingKeyStatsSaveInterval:
 		minutes, err := strconv.Atoi(setting.Value)
 		if err != nil {
@@ -87,6 +83,11 @@ func setSetting(c *gin.Context) {
 }
 
 func exportDB(c *gin.Context) {
+	// 先把内存里尚未落库的统计累加写库, 否则导出的统计最多落后一个保存周期。
+	if err := op.SaveCache(); err != nil {
+		resp.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
 	dump, err := op.DBExportAll(c.Request.Context())
 	if err != nil {
 		resp.Error(c, http.StatusInternalServerError, err.Error())
@@ -135,19 +136,6 @@ func importDB(c *gin.Context) {
 		}
 	}
 
-	seenLLMNames := make(map[string]struct{}, len(dump.LLMInfos))
-	for i := range dump.LLMInfos {
-		dump.LLMInfos[i].Name = strings.ToLower(strings.TrimSpace(dump.LLMInfos[i].Name))
-		if dump.LLMInfos[i].Name == "" {
-			resp.Error(c, http.StatusBadRequest, "model price name cannot be empty")
-			return
-		}
-		if _, ok := seenLLMNames[dump.LLMInfos[i].Name]; ok {
-			resp.Error(c, http.StatusBadRequest, "duplicate model price: "+dump.LLMInfos[i].Name)
-			return
-		}
-		seenLLMNames[dump.LLMInfos[i].Name] = struct{}{}
-	}
 	for i := range dump.Groups {
 		if dump.Groups[i].Mode == "" {
 			dump.Groups[i].Mode = model.GroupModeManual
@@ -161,15 +149,40 @@ func importDB(c *gin.Context) {
 		}
 	}
 
+	// 导入也是设置写入边界: 会话签名密钥不接受覆盖, 非法值(如非数字的统计周期)要拦下,
+	// 否则统计任务会因为注册失败而静默停摆。
+	kept := dump.Settings[:0]
+	for i := range dump.Settings {
+		if dump.Settings[i].Key == model.SettingKeyJWTSecret {
+			continue
+		}
+		if err := dump.Settings[i].Validate(); err != nil {
+			log.Warnf("skip invalid setting %s in import: %v", dump.Settings[i].Key, err)
+			continue
+		}
+		kept = append(kept, dump.Settings[i])
+	}
+	dump.Settings = kept
+
 	result, err := op.DBImportIncremental(c.Request.Context(), &dump)
 	if err != nil {
 		resp.Error(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
+	if err := op.SaveCache(); err != nil {
+		resp.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
 	if err := op.InitCache(); err != nil {
 		resp.Error(c, http.StatusInternalServerError, err.Error())
 		return
+	}
+	// 导入的设置可能改变了统计保存周期, 让正在跑的任务立刻改用新值。
+	if minutes, err := op.SettingGetInt(model.SettingKeyStatsSaveInterval); err == nil && minutes > 0 {
+		if !task.Update(string(model.SettingKeyStatsSaveInterval), time.Duration(minutes)*time.Minute) {
+			log.Errorf("task %s not rescheduled after import", model.SettingKeyStatsSaveInterval)
+		}
 	}
 
 	resp.Success(c, result)
@@ -191,7 +204,6 @@ func decodeDBDump(body []byte, dump *model.DBDump) error {
 		len(dump.GroupItems) == 0 &&
 		len(dump.Settings) == 0 &&
 		len(dump.APIKeys) == 0 &&
-		len(dump.LLMInfos) == 0 &&
 		len(dump.StatsDaily) == 0 &&
 		len(dump.StatsHourly) == 0 &&
 		len(dump.StatsTotal) == 0 &&

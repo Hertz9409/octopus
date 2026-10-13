@@ -1,8 +1,13 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
-// 首页各处共用的统计维度: 金额, 次数, 词元。
-export type MetricKey = 'cost' | 'count' | 'tokens';
+// 首页各处共用的统计维度: 次数, 词元。
+export type MetricKey = 'count' | 'tokens';
+
+// 旧版本持久化的指标可能是已下线的 cost, 恢复时统一回落到次数。
+function normalizeMetricKey(value: unknown, fallback: MetricKey): MetricKey {
+    return value === 'count' || value === 'tokens' ? value : fallback;
+}
 
 // 趋势图可选的时间周期, 单位为天。
 export type ChartPeriod = '1' | '7' | '30';
@@ -24,9 +29,9 @@ interface HomeViewState {
 export const useHomeViewStore = create<HomeViewState>()(
     persist(
         (set) => ({
-            channelRankSortMode: 'cost',
-            modelRankSortMode: 'cost',
-            chartMetricType: 'cost',
+            channelRankSortMode: 'count',
+            modelRankSortMode: 'count',
+            chartMetricType: 'count',
             chartPeriod: '1',
             isChannelNameHidden: false,
             setChannelRankSortMode: (value) => set({ channelRankSortMode: value }),
@@ -38,6 +43,17 @@ export const useHomeViewStore = create<HomeViewState>()(
         {
             name: 'home-view-options-storage',
             storage: createJSONStorage(() => localStorage),
+            // 旧版本持久化的金额维度已下线, 恢复时改回次数。
+            merge: (persisted, current) => {
+                const saved = (persisted ?? {}) as Partial<HomeViewState>;
+                return {
+                    ...current,
+                    ...saved,
+                    channelRankSortMode: normalizeMetricKey(saved.channelRankSortMode, current.channelRankSortMode),
+                    modelRankSortMode: normalizeMetricKey(saved.modelRankSortMode, current.modelRankSortMode),
+                    chartMetricType: normalizeMetricKey(saved.chartMetricType, current.chartMetricType),
+                };
+            },
             partialize: (state) => ({
                 channelRankSortMode: state.channelRankSortMode,
                 modelRankSortMode: state.modelRankSortMode,

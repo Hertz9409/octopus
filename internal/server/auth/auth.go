@@ -14,7 +14,8 @@ func GenerateJWTToken(expiresSec int) (string, int, error) {
 	now := time.Now()
 	maxAge := int((15 * time.Minute).Seconds())
 	if expiresSec > 0 {
-		maxAge = expiresSec
+		// 上限一年: 会话时长由客户端传, 不设上限时 32 位平台上 time.Duration 会溢出。
+		maxAge = min(expiresSec, int((365 * 24 * time.Hour).Seconds()))
 	} else if expiresSec == -1 {
 		maxAge = int((30 * 24 * time.Hour).Seconds())
 	}
@@ -24,9 +25,7 @@ func GenerateJWTToken(expiresSec int) (string, int, error) {
 		Issuer:    conf.APP_NAME,
 		ExpiresAt: jwt.NewNumericDate(now.Add(time.Duration(maxAge) * time.Second)),
 	}
-	user := op.UserGet()
-	secret := user.Username + user.Password
-	token, err := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString([]byte(secret))
+	token, err := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString(op.JWTSecret())
 	if err != nil {
 		return "", 0, err
 	}
@@ -35,10 +34,8 @@ func GenerateJWTToken(expiresSec int) (string, int, error) {
 
 func VerifyJWTToken(token string) bool {
 	jwtToken, err := jwt.Parse(token, func(token *jwt.Token) (interface{}, error) {
-		user := op.UserGet()
-		secret := user.Username + user.Password
-		return []byte(secret), nil
-	})
+		return op.JWTSecret(), nil
+	}, jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}))
 	if err != nil || !jwtToken.Valid {
 		return false
 	}

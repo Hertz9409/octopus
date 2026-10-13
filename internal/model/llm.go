@@ -1,17 +1,5 @@
 package model
 
-type LLMPrice struct {
-	Input      float64 `json:"input"`
-	Output     float64 `json:"output"`
-	CacheRead  float64 `json:"cache_read"`
-	CacheWrite float64 `json:"cache_write"`
-}
-
-type LLMInfo struct {
-	Name string `json:"name" gorm:"primaryKey;not null"`
-	LLMPrice
-}
-
 type OpenAIModel struct {
 	ID      string `json:"id"`
 	Object  string `json:"object"`
@@ -23,6 +11,7 @@ type OpenAIModelList struct {
 	Object string        `json:"object"`
 	Data   []OpenAIModel `json:"data"`
 }
+
 type AnthropicModel struct {
 	ID          string `json:"id"`
 	CreatedAt   string `json:"created_at"`

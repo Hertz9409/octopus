@@ -1,5 +1,5 @@
 import { memo, useEffect, useMemo, useState, type CSSProperties } from 'react';
-import { AlertCircle, ArrowDownToLine, ArrowRight, ArrowUpFromLine, Brain, Clock, Cpu, Database, DollarSign, Gauge, KeyRound, Loader2, Square, Zap, Percent } from 'lucide-react';
+import { AlertCircle, ArrowDownToLine, ArrowRight, ArrowUpFromLine, Brain, Clock, Cpu, Database, Gauge, KeyRound, Loader2, Square, Zap, Percent } from 'lucide-react';
 import { useTranslations } from 'use-intl';
 import JsonView from '@uiw/react-json-view';
 import { githubDarkTheme } from '@uiw/react-json-view/githubDark';
@@ -92,7 +92,6 @@ function LogMetrics({ log, now, brandColor, variant }: { log: RelayLogOverview; 
         { key: 'completion', Icon: ArrowUpFromLine, iconClassName: 'size-3.5 shrink-0 text-purple-500', value: (requestActive ? log.output_chars.toLocaleString() : log.usage.completion_tokens.toLocaleString()), cellClassName: 'col-span-4 md:col-span-1' },
         { key: 'cacheWrite', Icon: Database, iconClassName: 'size-3.5 shrink-0 text-orange-500', value: (log.usage.prompt_tokens_details?.write_cached_tokens ?? 0).toLocaleString(), cellClassName: 'whitespace-nowrap col-span-4 md:col-span-1' },
         { key: 'speed', Icon: Gauge, iconClassName: 'size-3.5 shrink-0 text-sky-500', value: outputSpeed > 0 ? `${outputSpeed.toFixed(0)}${outputSpeedUnit}` : '-', cellClassName: 'whitespace-nowrap col-span-4 md:col-span-1' },
-        { key: 'cost', Icon: DollarSign, iconClassName: 'size-3.5 shrink-0 text-emerald-500', value: log.cost.toFixed(6), cellClassName: 'whitespace-nowrap col-span-4 md:col-span-1' },
     ];
 
     return metrics.map((metric) => (
@@ -495,6 +494,9 @@ function LogCardBody({ log }: { log: RelayLogOverview }) {
     }, [isOpen, requestRunning]);
 
     // 新错误覆盖旧错误; 响应已开始或请求成功后清除错误提示。
+    // 这两段都是「与外部流同步」的累积状态: 流式更新里 errorText 会先被清空,
+    // 不能改成渲染期派生(会丢掉仍在进行中的那一轮错误)。
+    /* eslint-disable react-hooks/set-state-in-effect */
     useEffect(() => {
         if (log.status === 'committed' || log.status === 'success') {
             setDisplayError('');
@@ -516,6 +518,7 @@ function LogCardBody({ log }: { log: RelayLogOverview }) {
             ...current.filter((round) => round.round !== log.round),
         ].slice(0, 5));
     }, [errorText, log.round, log.target_channel_key, log.sending, log.round_started_at]);
+    /* eslint-enable react-hooks/set-state-in-effect */
 
     return (
         <>

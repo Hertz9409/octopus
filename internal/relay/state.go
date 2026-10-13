@@ -3,6 +3,7 @@ package relay
 import (
 	"context"
 	"sort"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -38,7 +39,6 @@ type RequestState struct {
 	GroupID         int            `json:"group_id"`        // 承载本请求的分组 ID, 供界面按主键直接定位分组而不必按名称回查。
 	APIKeyName      string         `json:"api_key_name"`    // 发起请求时的 API Key 名称。
 	Usage           llm.Usage      `json:"usage"`           // 请求结束时写入的展示用量。
-	Cost            float64        `json:"cost"`            // 请求结束时写入的累计费用。
 	OutputChars     int            `json:"output_chars"`    // 流式过程中按事件数量估算并实时累计的输出字符数, 仅用于界面展示, 不参与结算。
 
 	Round          int            `json:"round"`            // 最新一轮循环的递增序号, 人工中止按此匹配以免误杀下一轮。
@@ -63,6 +63,15 @@ type RequestState struct {
 const streamBuffer = 16                              // 单个状态流连接的非阻塞消息缓冲容量。
 const maxFinished = 50                               // 进程内最多保留的已结束请求数量。
 const outputPublishInterval = 500 * time.Millisecond // 输出字符数实时推送的最短发布间隔。
+const maxStoredBody = 1 << 20                        // 单条请求/响应正文在内存记录里保留的最大字节数。
+
+// truncateBody 截断过大的正文只留前缀: 记录按条数保留, 不设字节上限时大请求体可能长期占住大量内存。
+func truncateBody(body string) string {
+	if len(body) <= maxStoredBody {
+		return body
+	}
+	return strings.ToValidUTF8(body[:maxStoredBody], "") + "\n... (truncated)"
+}
 
 var (
 	idSeq    atomic.Uint64                          // 进程内严格递增的请求 ID。
@@ -85,7 +94,7 @@ func newRequestState(ctx context.Context, modelName, reasoningEffort string, gro
 		ReasoningEffort: reasoningEffort,
 		Protocol:        protocol,
 		GroupID:         groupID,
-		requestBody:     body,
+		requestBody:     truncateBody(body),
 		apiKeyID:        apiKeyID,
 		requestCtx:      requestCtx,
 		requestCancel:   requestCancel,
@@ -220,7 +229,7 @@ func (r *RequestState) markSucceeded(responseBody string, usage *llm.Usage) {
 
 	r.Status = StatusSuccess
 	r.Error = ""
-	r.responseBody = responseBody
+	r.responseBody = truncateBody(responseBody)
 	r.finishLocked(usage)
 }
 
@@ -237,7 +246,7 @@ func (r *RequestState) markFailed(err error, responseBody string, usage *llm.Usa
 		r.Error = err.Error()
 	}
 	if responseBody != "" {
-		r.responseBody = responseBody
+		r.responseBody = truncateBody(responseBody)
 	}
 	r.finishLocked(usage)
 }
@@ -250,12 +259,12 @@ func (r *RequestState) markCanceled(err error, responseBody string, usage *llm.U
 	r.Status = StatusCanceled
 	r.Error = err.Error()
 	if responseBody != "" {
-		r.responseBody = responseBody
+		r.responseBody = truncateBody(responseBody)
 	}
 	r.finishLocked(usage)
 }
 
-// finishLocked 写入用量和费用, 发布终态, 更新请求级统计并裁剪历史; 调用方必须持有锁。
+// finishLocked 写入用量, 发布终态, 更新请求级统计并裁剪历史; 调用方必须持有锁。
 func (r *RequestState) finishLocked(usage *llm.Usage) {
 	r.Sending = false
 	r.roundCancel = nil
@@ -266,8 +275,7 @@ func (r *RequestState) finishLocked(usage *llm.Usage) {
 	if usage != nil {
 		r.Usage = *usage
 	}
-	metrics := usageMetrics(r.TargetModel, usage)
-	r.Cost = metrics.InputCost + metrics.OutputCost
+	metrics := usageMetrics(usage)
 	r.Duration = time.Since(r.StartedAt)
 	metrics.WaitTime = r.Duration.Milliseconds()
 	if r.Status == StatusSuccess {
@@ -283,41 +291,28 @@ func (r *RequestState) finishLocked(usage *llm.Usage) {
 	}
 	publishRequestLocked(r)
 
-	finished := 0
-	oldest := uint64(0)
+	finishedIDs := make([]uint64, 0, len(requests))
 	for id, request := range requests {
 		if request.Status == StatusRunning || request.Status == StatusCommitted {
 			continue
 		}
-		finished++
-		if oldest == 0 || id < oldest {
-			oldest = id
-		}
+		finishedIDs = append(finishedIDs, id)
 	}
-	if finished > maxFinished {
-		delete(requests, oldest)
+	// 一次只删一条会在多个请求同时结束时长期超出上限, 这里一次裁到上限。
+	if len(finishedIDs) > maxFinished {
+		sort.Slice(finishedIDs, func(i, j int) bool { return finishedIDs[i] < finishedIDs[j] })
+		for _, id := range finishedIDs[:len(finishedIDs)-maxFinished] {
+			delete(requests, id)
+		}
 	}
 }
 
-// usageMetrics 将统一用量按模型单价转换为 Token 与费用统计; 无用量或价格时对应费用为零。
-func usageMetrics(modelName string, usage *llm.Usage) model.StatsMetrics {
+// usageMetrics 将统一用量转换为 Token 统计。
+func usageMetrics(usage *llm.Usage) model.StatsMetrics {
 	if usage == nil {
 		return model.StatsMetrics{}
 	}
-	metrics := model.StatsMetrics{InputToken: usage.PromptTokens, OutputToken: usage.CompletionTokens}
-	price, err := op.LLMGet(modelName)
-	if err != nil {
-		return metrics
-	}
-	cachedTokens, writeCachedTokens := int64(0), int64(0)
-	if usage.PromptTokensDetails != nil {
-		cachedTokens = usage.PromptTokensDetails.CachedTokens
-		writeCachedTokens = usage.PromptTokensDetails.WriteCachedTokens
-	}
-	inputTokens := max(int64(0), usage.PromptTokens-cachedTokens-writeCachedTokens)
-	metrics.InputCost = (float64(inputTokens)*price.Input + float64(cachedTokens)*price.CacheRead + float64(writeCachedTokens)*price.CacheWrite) / 1_000_000
-	metrics.OutputCost = float64(usage.CompletionTokens) * price.Output / 1_000_000
-	return metrics
+	return model.StatsMetrics{InputToken: usage.PromptTokens, OutputToken: usage.CompletionTokens}
 }
 
 // publishRequestLocked 非阻塞发布最新请求状态, 连接拥塞时关闭它并交给客户端重连获取全量快照; 调用方必须持有锁。

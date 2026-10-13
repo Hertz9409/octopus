@@ -5,7 +5,6 @@ import {
     CheckCircle2,
     Clock,
     Copy,
-    DollarSign,
     Download,
     Eye,
     EyeOff,
@@ -27,7 +26,7 @@ import { useMorphingDialog } from '@/components/ui/morphing-dialog';
 type FormattedMetric = StatsMetricsFormatted['request_count'];
 
 // 模型统计的排序维度
-type ModelSortKey = 'cost' | 'count' | 'tokens';
+type ModelSortKey = 'count' | 'tokens';
 
 // 成功率百分比, 无请求时按 0 处理
 const successRate = (success: number, failed: number) => {
@@ -56,7 +55,7 @@ export function ChannelStats({ channel, onEdit }: {
     const tCommon = useTranslations('common');
     const { setIsOpen } = useMorphingDialog();
     const deleteChannel = useDeleteChannel();
-    const [modelSort, setModelSort] = useState<ModelSortKey>('cost');
+    const [modelSort, setModelSort] = useState<ModelSortKey>('count');
     // 隐藏渠道名称, 分享图也跟随此状态
     const [isNameHidden, setIsNameHidden] = useState(false);
     // 删除需二次确认, 确认态下换成取消与确认两个键
@@ -101,17 +100,6 @@ export function ChannelStats({ channel, onEdit }: {
             ),
         },
         {
-            icon: <DollarSign className="size-3.5 text-chart-5" />,
-            label: t('totalCost'),
-            value: <MetricValue metric={metrics.total_cost} />,
-            sub: (
-                <>
-                    <span>↓ {metrics.input_cost.formatted.value}{metrics.input_cost.formatted.unit}</span>
-                    <span>↑ {metrics.output_cost.formatted.value}{metrics.output_cost.formatted.unit}</span>
-                </>
-            ),
-        },
-        {
             icon: <Clock className="size-3.5 text-primary" />,
             label: t('avgWaitTime'),
             value: <MetricValue metric={metrics.wait_time} />,
@@ -125,13 +113,10 @@ export function ChannelStats({ channel, onEdit }: {
             return {
                 id: channelModel.model_id,
                 name: channelModel.model_name,
-                weight: modelSort === 'cost'
-                    ? formatted.total_cost.raw
-                    : modelSort === 'tokens' ? formatted.total_token.raw : formatted.request_count.raw,
+                weight: modelSort === 'tokens' ? formatted.total_token.raw : formatted.request_count.raw,
                 rate: successRate(formatted.request_success.raw, formatted.request_failed.raw),
                 count: formatted.request_count,
                 tokens: formatted.total_token,
-                cost: formatted.total_cost,
             };
         });
 
@@ -142,7 +127,6 @@ export function ChannelStats({ channel, onEdit }: {
     }, [channel.models, modelSort]);
 
     const sortOptions: { key: ModelSortKey; label: string }[] = [
-        { key: 'cost', label: t('sortByCost') },
         { key: 'count', label: t('sortByCount') },
         { key: 'tokens', label: t('sortByTokens') },
     ];
@@ -342,7 +326,7 @@ export function ChannelStats({ channel, onEdit }: {
                                         </div>
                                     </div>
 
-                                    <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs tabular-nums @md/stats:w-64 @md/stats:grid-cols-4 @md/stats:gap-x-2">
+                                    <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs tabular-nums @md/stats:w-52 @md/stats:grid-cols-3 @md/stats:gap-x-2">
                                         <div className="flex items-center gap-1">
                                             <MessageSquare className="size-3.5 shrink-0 text-chart-1" />
                                             <MetricValue metric={model.count} />
@@ -354,10 +338,6 @@ export function ChannelStats({ channel, onEdit }: {
                                         <div className="flex items-center gap-1">
                                             <FileText className="size-3.5 shrink-0 text-chart-3" />
                                             <MetricValue metric={model.tokens} />
-                                        </div>
-                                        <div className="flex items-center gap-1">
-                                            <DollarSign className="size-3.5 shrink-0 text-chart-5" />
-                                            <MetricValue metric={model.cost} />
                                         </div>
                                     </div>
                                 </li>

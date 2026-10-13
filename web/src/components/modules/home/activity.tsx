@@ -138,7 +138,6 @@ export function Activity() {
                                     ['requestCount', tooltip.formatted.request_count],
                                     ['waitTime', tooltip.formatted.wait_time],
                                     ['totalToken', tooltip.formatted.total_token],
-                                    ['totalCost', tooltip.formatted.total_cost],
                                 ] as const).map(([labelKey, metric]) => (
                                     <Fragment key={labelKey}>
                                         <span className="wrap-break-word">{t(labelKey)}</span>

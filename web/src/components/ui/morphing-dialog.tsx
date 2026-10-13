@@ -170,6 +170,8 @@ function MorphingDialogContent({
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
+        // 嵌套的确认框(AlertDialog)自己处理 Esc; 已被内层拦下的 Esc 也不再重复关闭。
+        if (event.defaultPrevented || document.querySelector('[role="alertdialog"]')) return;
         setIsOpen(false);
       }
       if (event.key === 'Tab') {
@@ -238,6 +240,10 @@ function MorphingDialogContent({
     },
     (event) => {
       const target = event.target as HTMLElement | null;
+      // 确认框是独立 portal, 点它的遮罩或按钮都不该关掉底下的面板。
+      if (document.querySelector('[role="alertdialog"]')) {
+        return true;
+      }
       if (target?.closest('[data-slot="select-content"]')) {
         return true;
       }

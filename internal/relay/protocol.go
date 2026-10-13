@@ -100,9 +100,18 @@ func inspectStreamEvent(format llm.APIFormat, event *httpclient.StreamEvent) (bo
 			}
 			return true, &llm.ResponseError{Detail: llm.ErrorDetail{Message: "response failed", Type: "response_failed"}}
 		case responses.StreamEventTypeResponseIncomplete:
+			reason := ""
+			if parsed.Response != nil && parsed.Response.IncompleteDetails != nil {
+				reason = parsed.Response.IncompleteDetails.Reason
+			}
+			// 达到输出上限或被内容过滤截断是上游的正常终态, 内容本身可以交付;
+			// 判成渠道故障会换渠道重试, 并把本来健康的渠道打进冷却。
+			if normalIncompleteReason(reason) {
+				return true, nil
+			}
 			message := "response incomplete"
-			if parsed.Response != nil && parsed.Response.IncompleteDetails != nil && parsed.Response.IncompleteDetails.Reason != "" {
-				message += ": " + parsed.Response.IncompleteDetails.Reason
+			if reason != "" {
+				message += ": " + reason
 			}
 			return true, &llm.ResponseError{Detail: llm.ErrorDetail{Message: message, Type: "response_incomplete"}}
 		case responses.StreamEventTypeResponseCancelled:
@@ -148,6 +157,11 @@ func inspectStreamEvent(format llm.APIFormat, event *httpclient.StreamEvent) (bo
 	}
 }
 
+// normalIncompleteReason 判断 Responses 的不完整终态是否属于正常截断: 这类原因响应内容可交付, 不该触发换渠道重试。
+func normalIncompleteReason(reason string) bool {
+	return reason == "max_output_tokens" || reason == "content_filter"
+}
+
 // validateResponse 检查统一响应中需要在提交前判定为失败的终止原因; 仅 Responses 协议会以正常响应下发这类终态。
 func validateResponse(format llm.APIFormat, response *llm.Response) error {
 	if response == nil {
@@ -160,7 +174,8 @@ func validateResponse(format llm.APIFormat, response *llm.Response) error {
 	case "error":
 		return &llm.ResponseError{Detail: llm.ErrorDetail{Message: "response failed", Type: "response_failed"}}
 	case "length":
-		return &llm.ResponseError{Detail: llm.ErrorDetail{Message: "response incomplete", Type: "response_incomplete"}}
+		// 达到最大输出长度属于正常截断, 把半截答案交给客户端, 而不是换渠道重试。
+		return nil
 	case "cancelled":
 		return &llm.ResponseError{Detail: llm.ErrorDetail{Message: "response cancelled", Type: "response_cancelled"}}
 	default:
