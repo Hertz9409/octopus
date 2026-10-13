@@ -152,6 +152,8 @@ func importDB(c *gin.Context) {
 		if dump.Groups[i].Mode == "" {
 			dump.Groups[i].Mode = model.GroupModeManual
 		}
+		// 导入也是写入边界: 与创建/更新一致裁掉表达式两端空白, 免得手改过的备份带进不一致的值。
+		dump.Groups[i].MatchPattern = strings.TrimSpace(dump.Groups[i].MatchPattern)
 		model.NormalizeGroupRelayConfig(&dump.Groups[i].RelayConfig)
 		if dump.Groups[i].Mode != model.GroupModeManual && dump.Groups[i].Mode != model.GroupModeFailover {
 			resp.Error(c, http.StatusBadRequest, "invalid group relay mode")

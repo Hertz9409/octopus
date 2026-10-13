@@ -10,6 +10,7 @@ import (
 	"github.com/bestruirui/octopus/internal/db"
 	"github.com/bestruirui/octopus/internal/model"
 	"github.com/bestruirui/octopus/internal/utils/cache"
+	"github.com/dlclark/regexp2"
 	"gorm.io/gorm"
 )
 
@@ -17,6 +18,27 @@ var (
 	groupCache     = cache.New[int, model.Group](16) // 按主键保存完整分组配置。
 	groupNameIndex = cache.New[string, int](16)      // 客户端模型名对应的分组主键。
 )
+
+// maxMatchPatternLen 限制匹配表达式的长度, 与前端 web/src/components/modules/group/utils.ts 的
+// MAX_MATCH_PATTERN_LENGTH 保持一致: 超长值会被分组列表, 事件流与备份导出反复回显。
+const maxMatchPatternLen = 512
+
+// validateMatchPattern 按 ECMAScript 方言校验匹配表达式。
+// 表达式的语义由管理界面的正则引擎解释, 转发路径不读它; 这里只挡住编译不过或过长的值,
+// 免得存下一个界面永远用不了, 却跟着列表, 事件流与备份到处走的表达式。
+// 与渠道的模型过滤正则同一套方言, 见 internal/model/setting.go 的 Validate。
+func validateMatchPattern(pattern string) error {
+	if pattern == "" {
+		return nil
+	}
+	if len(pattern) > maxMatchPatternLen {
+		return fmt.Errorf("match pattern is too long (max %d)", maxMatchPatternLen)
+	}
+	if _, err := regexp2.Compile(pattern, regexp2.ECMAScript); err != nil {
+		return fmt.Errorf("invalid match pattern: %w", err)
+	}
+	return nil
+}
 
 // GroupList 返回缓存中的全部分组, 成员已补齐界面展示所需的名称与可用性, 按名称定序。
 // 不含实时路由状态: 路由状态由 Relay 持有, 而 Relay 依赖本包, 故由处理器在返回前补齐。
@@ -76,11 +98,16 @@ func GroupCreate(req *model.GroupCreateRequest, ctx context.Context) (*model.Gro
 	if name == "" {
 		return nil, fmt.Errorf("group name is required")
 	}
+	pattern := strings.TrimSpace(req.MatchPattern)
+	if err := validateMatchPattern(pattern); err != nil {
+		return nil, err
+	}
 	group := model.Group{
-		Name:        name,
-		Mode:        req.Mode,
-		RelayConfig: req.RelayConfig,
-		Items:       make([]model.GroupItem, len(req.Items)),
+		Name:         name,
+		Mode:         req.Mode,
+		RelayConfig:  req.RelayConfig,
+		MatchPattern: pattern,
+		Items:        make([]model.GroupItem, len(req.Items)),
 	}
 	if group.Mode == "" {
 		group.Mode = model.GroupModeManual
@@ -125,6 +152,16 @@ func GroupUpdate(id int, req *model.GroupUpdateRequest, ctx context.Context) (*m
 		model.NormalizeGroupRelayConfig(&config)
 		selectFields = append(selectFields, "relay_config")
 		updates.RelayConfig = config
+	}
+	// 匹配表达式不参与转发, 但写入侧仍按 ECMAScript 方言校验: 编译不过的表达式界面用不了,
+	// 存下来只会跟着分组列表, 事件流与备份导出到处走。
+	if req.MatchPattern != nil {
+		pattern := strings.TrimSpace(*req.MatchPattern)
+		if err := validateMatchPattern(pattern); err != nil {
+			return nil, err
+		}
+		selectFields = append(selectFields, "match_pattern")
+		updates.MatchPattern = pattern
 	}
 
 	var group model.Group

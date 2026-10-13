@@ -378,6 +378,11 @@
             "items": "Member Order",
             "addItem": "Add Model",
             "autoAdd": "Auto Add",
+            "matchPattern": "Match Pattern",
+            "matchPatternPlaceholder": "Regex; empty matches the group name",
+            "matchPatternInvalid": "Invalid regular expression",
+            "matchPatternHint": "Saved with the group; empty matches by group name.",
+            "addableCount": "{count} to add",
             "clear": "Clear"
         },
         "memberUnavailable": "This member is unavailable because its channel or credential is disabled"
@@ -483,6 +488,7 @@
             "running": "Syncing, keep this page open.",
             "progress": "{done} / {total} channels done",
             "summary": "Finished: {success} succeeded · {partial} partly succeeded · {failed} failed · {skipped} skipped",
+            "groupUpdate": "Update groups",
             "statusSuccess": "Succeeded",
             "statusPartial": "Partly succeeded",
             "statusFailed": "Failed",
@@ -492,7 +498,16 @@
             "reasonSaveFailed": "Fetched but failed to save; models kept",
             "reasonLoadFailed": "Failed to load channel configuration",
             "counts": "{added} added · {removed} removed",
-            "countsPartial": "{added} added · {removed} removed · {failed} credentials failed"
+            "countsPartial": "{added} added · {removed} removed · {failed} credentials failed",
+            "groupUpdating": "Updating groups…",
+            "groupUpdateHint": "Add newly synced models to groups by their saved match pattern. Members are only added, never removed.",
+            "groupUpdateSummary": "Added {added} members to {groups} groups",
+            "groupUpdateNone": "No new members to add",
+            "groupUpdateFailed": "Failed to update groups",
+            "groupResultAdded": "+{count} added",
+            "groupResultNoMatch": "No new matches",
+            "groupResultInvalid": "Invalid pattern, skipped",
+            "groupResultFailed": "Update failed"
         },
         "stats": {
             "totalRequests": "Total Requests",

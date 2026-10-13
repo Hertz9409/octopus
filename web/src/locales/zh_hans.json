@@ -378,6 +378,11 @@
             "items": "成员顺序",
             "addItem": "添加模型",
             "autoAdd": "自动添加",
+            "matchPattern": "匹配表达式",
+            "matchPatternPlaceholder": "正则表达式，留空按分组名匹配",
+            "matchPatternInvalid": "正则表达式无效",
+            "matchPatternHint": "随分组保存；留空时按分组名包含匹配。",
+            "addableCount": "可添加 {count} 项",
             "clear": "清空"
         },
         "memberUnavailable": "该成员的渠道或凭据已停用"
@@ -483,6 +488,7 @@
             "running": "同步进行中，请勿关闭页面。",
             "progress": "已完成 {done} / {total} 个渠道",
             "summary": "同步完成：{success} 个成功 · {partial} 个部分成功 · {failed} 个失败 · {skipped} 个跳过",
+            "groupUpdate": "更新分组",
             "statusSuccess": "成功",
             "statusPartial": "部分成功",
             "statusFailed": "失败",
@@ -492,7 +498,16 @@
             "reasonSaveFailed": "拉取成功但保存失败，保留原模型",
             "reasonLoadFailed": "读取渠道配置失败",
             "counts": "新增 {added} 个 · 移除 {removed} 个",
-            "countsPartial": "新增 {added} 个 · 移除 {removed} 个 · {failed} 个凭据失败"
+            "countsPartial": "新增 {added} 个 · 移除 {removed} 个 · {failed} 个凭据失败",
+            "groupUpdating": "正在更新分组…",
+            "groupUpdateHint": "按各分组保存的匹配表达式补入模型同步后的新成员；只新增，不删除已有成员。",
+            "groupUpdateSummary": "{groups} 个分组共新增 {added} 个成员",
+            "groupUpdateNone": "没有需要新增的成员",
+            "groupUpdateFailed": "更新分组失败",
+            "groupResultAdded": "新增 {count}",
+            "groupResultNoMatch": "无新匹配",
+            "groupResultInvalid": "表达式无效，已跳过",
+            "groupResultFailed": "更新失败"
         },
         "stats": {
             "totalRequests": "总请求",

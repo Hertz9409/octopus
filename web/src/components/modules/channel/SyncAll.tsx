@@ -1,9 +1,10 @@
-import { useEffect, useSyncExternalStore } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import { AlertTriangle, CheckCircle2, MinusCircle, RefreshCw, XCircle } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'use-intl';
 import { toast } from 'sonner';
 import { useChannelStats } from '@/api/channel';
+import { errorMessage } from '@/api/client';
 import { groupListQueryOptions, modelListQueryOptions } from '@/api/queries';
 import { cn } from '@/lib/utils';
 import { Button, buttonVariants } from '@/components/ui/button';
@@ -26,6 +27,7 @@ import {
     type SyncResult,
     type SyncStatus,
 } from './sync';
+import { syncGroupsAfterChannelSync, type GroupSyncResult } from '../group/sync';
 
 const STATUS_ICON = {
     success: CheckCircle2,
@@ -84,6 +86,8 @@ function SyncAllContent() {
     const { running, total, results } = useSyncExternalStore(subscribeSyncProgress, getSyncProgress);
     const phase = running ? 'running' : results.length > 0 ? 'done' : 'confirm';
     const counts = countByStatus(results);
+    const [groupPhase, setGroupPhase] = useState<'idle' | 'running'>('idle');
+    const [groupResults, setGroupResults] = useState<GroupSyncResult[]>([]);
 
     // 每次打开都回到确认态: 上一轮的结果已经看过, 清掉后才能重新开始; 正在跑的一轮不清。
     useEffect(() => {
@@ -103,6 +107,31 @@ function SyncAllContent() {
             toast.warning(summary);
         } else {
             toast.success(summary);
+        }
+    };
+
+    // 渠道模型同步完成后按各分组保存的匹配表达式补成员: 只新增, 不删除已有成员, 也不改动它们的顺序。
+    // 拉取分组与授权列表失败时不能把按钮留在「正在更新分组」: 复位与提示都放在 finally/catch 里。
+    const updateGroups = async () => {
+        setGroupPhase('running');
+        try {
+            const next = await syncGroupsAfterChannelSync();
+            setGroupResults(next);
+            queryClient.invalidateQueries({ queryKey: groupListQueryOptions.queryKey });
+            // 分组详情缓存由 SSE 维护, 这里顺带失效一次, 免得事件流断开时日志详情停留在旧成员上。
+            queryClient.invalidateQueries({ queryKey: ['groups', 'detail'] });
+            const added = next.reduce((sum, item) => sum + item.added, 0);
+            const groups = next.filter((item) => item.status === 'success').length;
+            const summary = added === 0 ? t('groupUpdateNone') : t('groupUpdateSummary', { added, groups });
+            if (next.some((item) => item.status === 'failed')) {
+                toast.warning(summary);
+            } else {
+                toast.success(summary);
+            }
+        } catch (error) {
+            toast.error(t('groupUpdateFailed'), { description: errorMessage(error) });
+        } finally {
+            setGroupPhase('idle');
         }
     };
 
@@ -146,6 +175,45 @@ function SyncAllContent() {
                     {results.map((result) => (
                         <SyncRow key={result.channelId} result={result} />
                     ))}
+                </div>
+            )}
+
+            {phase === 'done' && (
+                <div className="mt-4 shrink-0 rounded-2xl border border-border/60 bg-muted/30 p-3">
+                    <p className="text-xs text-muted-foreground">{t('groupUpdateHint')}</p>
+                    {groupResults.length > 0 && (
+                        <ul className="mt-2 max-h-32 space-y-1 overflow-auto text-[11px]">
+                            {groupResults.map((item) => {
+                                const detail = item.status === 'success'
+                                    ? t('groupResultAdded', { count: item.added })
+                                    : item.status === 'failed'
+                                        ? item.error
+                                            ? `${t('groupResultFailed')} · ${item.error}`
+                                            : t('groupResultFailed')
+                                        : item.reason === 'invalid-pattern'
+                                            ? t('groupResultInvalid')
+                                            : t('groupResultNoMatch');
+                                return (
+                                    <li key={item.groupId} className="flex items-center justify-between gap-3">
+                                        <span className="truncate text-muted-foreground">{item.groupName}</span>
+                                        <span className={cn('shrink-0', item.status === 'failed' ? 'text-destructive' : 'text-muted-foreground')}>
+                                            {detail}
+                                        </span>
+                                    </li>
+                                );
+                            })}
+                        </ul>
+                    )}
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="mt-2"
+                        onClick={updateGroups}
+                        disabled={groupPhase === 'running'}
+                    >
+                        {groupPhase === 'running' ? t('groupUpdating') : t('groupUpdate')}
+                    </Button>
                 </div>
             )}
 

@@ -37,6 +37,7 @@ function EditDialogContent({ group, displayMembers, isSubmitting, onSubmit }: Ed
                     name: group.name,
                     mode: group.mode,
                     relay_config: group.relay_config,
+                    matchPattern: group.match_pattern,
                     members: displayMembers,
                 }}
                 submitText={t('detail.actions.save')}
@@ -116,6 +117,8 @@ export const GroupCard = memo(function GroupCard({ group, now }: { group: Group;
 
         if (values.name !== group.name) payload.name = values.name;
         if (values.mode !== group.mode) payload.mode = values.mode;
+        // 匹配表达式只在改动时提交; 空串表示改回按分组名做字面量匹配。
+        if (values.matchPattern !== group.match_pattern) payload.match_pattern = values.matchPattern;
         if (
             values.relay_config.member_max_attempts !== group.relay_config.member_max_attempts ||
             values.relay_config.member_retry_interval_seconds !== group.relay_config.member_retry_interval_seconds ||
@@ -143,7 +146,7 @@ export const GroupCard = memo(function GroupCard({ group, now }: { group: Group;
             },
             onError,
         });
-    }, [group.id, group.items, group.mode, group.name, group.relay_config, onSuccess, onError, updateGroup]);
+    }, [group.id, group.items, group.match_pattern, group.mode, group.name, group.relay_config, onSuccess, onError, updateGroup]);
 
     return (
         <article className="flex flex-col rounded-3xl border border-border bg-card text-card-foreground p-4">

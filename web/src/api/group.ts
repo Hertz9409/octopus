@@ -48,6 +48,7 @@ export interface Group {
     name: string;
     mode: GroupMode;
     relay_config: GroupRelayConfig;
+    match_pattern: string; // 自动添加成员的匹配表达式；留空表示按分组名做字面量匹配。只在管理界面解释。
     items: GroupItem[]; // 恒为数组，后端读取侧承诺不为 null。
     runtime: GroupRuntime; // 随分组一并返回；当前成员一律读 runtime.current_item_id。
 }
@@ -62,6 +63,7 @@ export interface GroupCreateRequest {
     name: string;
     mode: GroupMode;
     relay_config: GroupRelayConfig;
+    match_pattern: string;
     items: GroupItemInput[];
 }
 
@@ -71,6 +73,7 @@ export interface GroupUpdateRequest {
     name?: string;
     mode?: GroupMode;
     relay_config?: GroupRelayConfig;
+    match_pattern?: string; // 空串表示改回按分组名匹配。
     items?: GroupItemInput[];
     active_item_id?: number; // 手动模式指定的当前成员，0 表示取消选择。
 }

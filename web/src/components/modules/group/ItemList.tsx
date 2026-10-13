@@ -75,7 +75,9 @@ function MemberItem({
     const t = useTranslations('group');
     const { Icon, className: iconClassName } = getModelIcon(member.name);
     const [confirmDelete, setConfirmDelete] = useState(false);
-    const isDisabled = member.enabled === false;
+    // 只有明确可用(enabled === true)才允许点选: SSE 断线期间缓存里的旧数据可能缺 available,
+    // 这时按不可用处理, 免得点成当前成员却被转发端当不可用剔除。
+    const isDisabled = member.enabled !== true;
 
     return (
         <div

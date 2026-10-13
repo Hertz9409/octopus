@@ -378,6 +378,11 @@
             "items": "成員順序",
             "addItem": "新增模型",
             "autoAdd": "自動新增",
+            "matchPattern": "匹配表達式",
+            "matchPatternPlaceholder": "正則表達式，留空按分組名匹配",
+            "matchPatternInvalid": "正則表達式無效",
+            "matchPatternHint": "隨分組保存；留空時按分組名包含匹配。",
+            "addableCount": "可新增 {count} 項",
             "clear": "清空"
         },
         "memberUnavailable": "該成員的供應源或憑證已停用"
@@ -483,6 +488,7 @@
             "running": "同步進行中，請勿關閉頁面。",
             "progress": "已完成 {done} / {total} 個供應源",
             "summary": "同步完成：{success} 個成功 · {partial} 個部分成功 · {failed} 個失敗 · {skipped} 個跳過",
+            "groupUpdate": "更新分組",
             "statusSuccess": "成功",
             "statusPartial": "部分成功",
             "statusFailed": "失敗",
@@ -492,7 +498,16 @@
             "reasonSaveFailed": "拉取成功但儲存失敗，保留原模型",
             "reasonLoadFailed": "讀取供應源設定失敗",
             "counts": "新增 {added} 個 · 移除 {removed} 個",
-            "countsPartial": "新增 {added} 個 · 移除 {removed} 個 · {failed} 個憑證失敗"
+            "countsPartial": "新增 {added} 個 · 移除 {removed} 個 · {failed} 個憑證失敗",
+            "groupUpdating": "正在更新分組…",
+            "groupUpdateHint": "按各分組保存的匹配表達式補入模型同步後的新成員；只新增，不刪除已有成員。",
+            "groupUpdateSummary": "{groups} 個分組共新增 {added} 個成員",
+            "groupUpdateNone": "沒有需要新增的成員",
+            "groupUpdateFailed": "更新分組失敗",
+            "groupResultAdded": "新增 {count}",
+            "groupResultNoMatch": "無新匹配",
+            "groupResultInvalid": "表達式無效，已略過",
+            "groupResultFailed": "更新失敗"
         },
         "stats": {
             "totalRequests": "總請求",

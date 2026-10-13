@@ -15,12 +15,13 @@ import { getModelIcon } from '@/lib/model-icons';
 import type { GroupMode, GroupRelayConfig } from '@/api/group';
 import type { SelectedMember } from './ItemList';
 import { MemberList } from './ItemList';
-import { matchesGroupName, memberKey, normalizeKey } from './utils';
+import { MAX_MATCH_PATTERN_LENGTH, compileMatchPattern, matchesAutoAdd, memberKey, normalizeKey } from './utils';
 
 export type GroupEditorValues = {
     name: string;
     mode: GroupMode;
     relay_config: GroupRelayConfig;
+    matchPattern: string;
     members: SelectedMember[];
 };
 
@@ -62,12 +63,20 @@ function ModelPickerSection({
     onAdd,
     onAutoAdd,
     autoAddDisabled,
+    autoAddCount,
+    matchPattern,
+    onMatchPatternChange,
+    matchPatternInvalid,
 }: {
     grantMembers: SelectedMember[];
     selectedMembers: SelectedMember[];
     onAdd: (channel: SelectedMember) => void;
     onAutoAdd: () => void;
     autoAddDisabled: boolean;
+    autoAddCount: number;
+    matchPattern: string;
+    onMatchPatternChange: (value: string) => void;
+    matchPatternInvalid: boolean;
 }) {
     const t = useTranslations('group');
     const [searchKeyword, setSearchKeyword] = useState('');
@@ -145,7 +154,31 @@ function ModelPickerSection({
                 >
                     <Sparkles className="size-3.5" />
                     <span>{t('form.autoAdd')}</span>
+                    {autoAddCount > 0 && <span className="tabular-nums">{autoAddCount}</span>}
                 </button>
+            </div>
+
+            {/* 匹配表达式随分组保存: 「自动添加」按它挑选成员, 渠道同步后的「更新分组」也按它补齐新模型。 */}
+            <div className="flex items-center gap-2 px-3 py-1.5 border-b border-border/30">
+                <Input
+                    value={matchPattern}
+                    onChange={(event) => onMatchPatternChange(event.target.value)}
+                    onKeyDown={(event) => {
+                        if (event.key === 'Enter') event.preventDefault();
+                    }}
+                    maxLength={MAX_MATCH_PATTERN_LENGTH}
+                    placeholder={t('form.matchPatternPlaceholder')}
+                    aria-label={t('form.matchPattern')}
+                    aria-invalid={matchPatternInvalid}
+                    className={cn(
+                        'h-6 rounded-lg border-border/60 bg-background/70 px-2 text-xs shadow-none focus-visible:ring-0',
+                        matchPatternInvalid && 'border-destructive/60 text-destructive'
+                    )}
+                />
+                <span className={cn('shrink-0 text-xs', matchPatternInvalid ? 'text-destructive' : 'text-muted-foreground')}>
+                    {matchPatternInvalid ? t('form.matchPatternInvalid') : t('form.addableCount', { count: autoAddCount })}
+                </span>
+                <FieldHelp text={t('form.matchPatternHint')} />
             </div>
 
             <div className="flex-1 min-h-0 overflow-y-auto p-2">
@@ -310,6 +343,7 @@ export function GroupEditor({
         name?: string;
         mode?: GroupMode;
         relay_config?: Partial<GroupRelayConfig>;
+        matchPattern?: string;
         members?: SelectedMember[];
     };
     submitText: string;
@@ -339,13 +373,17 @@ export function GroupEditor({
     }));
     const [selectedMembers, setSelectedMembers] = useState<SelectedMember[]>(initial?.members ?? []);
     const [removingIds, setRemovingIds] = useState<Set<string>>(new Set());
+    const [matchPattern, setMatchPattern] = useState(initial?.matchPattern ?? '');
 
     const groupKey = normalizeKey(groupName);
+    const { regex: matchRegex, invalid: matchPatternInvalid } = useMemo(() => compileMatchPattern(matchPattern), [matchPattern]);
 
     const matchedModelChannels = useMemo(() => {
-        if (!groupKey) return [];
-        return grantMembers.filter((mc) => matchesGroupName(mc.name, groupKey));
-    }, [groupKey, grantMembers]);
+        // 表达式非法时不退回字面量匹配: 否则按钮禁用期间列表看起来仍是「按分组名匹配」的结果, 与输入不符。
+        if (matchPatternInvalid) return [];
+        if (!matchRegex && !groupKey) return [];
+        return grantMembers.filter((mc) => matchesAutoAdd(mc.name, groupKey, matchRegex));
+    }, [groupKey, grantMembers, matchRegex, matchPatternInvalid]);
 
     const handleAddMember = useCallback((channel: SelectedMember) => {
         const key = memberKey(channel);
@@ -355,11 +393,13 @@ export function GroupEditor({
         });
     }, []);
 
-    const autoAddDisabled = useMemo(() => {
-        if (!groupKey || matchedModelChannels.length === 0) return true;
+    // 按钮上的数字是「这次会新增多少项」, 与 autoAddDisabled 用同一口径, 避免按钮可用但数字为 0。
+    const autoAddCount = useMemo(() => {
         const existing = new Set(selectedMembers.map((m) => m.id));
-        return matchedModelChannels.every((mc) => existing.has(memberKey(mc)));
-    }, [groupKey, matchedModelChannels, selectedMembers]);
+        return matchedModelChannels.filter((mc) => !existing.has(memberKey(mc))).length;
+    }, [matchedModelChannels, selectedMembers]);
+
+    const autoAddDisabled = matchPatternInvalid || autoAddCount === 0;
 
     const handleAutoAdd = useCallback(() => {
         if (matchedModelChannels.length === 0) return;
@@ -385,7 +425,8 @@ export function GroupEditor({
         setRemovingIds(new Set());
     }, []);
 
-    const isValid = groupKey.length > 0 && selectedMembers.length > 0;
+    // 非法表达式在输入框旁已标红, 这里一并挡住提交: 后端写入侧同样会拒绝, 不该等它报错才发现。
+    const isValid = groupKey.length > 0 && selectedMembers.length > 0 && !matchPatternInvalid;
 
     const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -394,6 +435,7 @@ export function GroupEditor({
             name: groupName,
             mode,
             relay_config: relayConfig,
+            matchPattern: matchPattern.trim(),
             members: selectedMembers,
         });
     };
@@ -447,6 +489,10 @@ export function GroupEditor({
                                     onAdd={handleAddMember}
                                     onAutoAdd={handleAutoAdd}
                                     autoAddDisabled={autoAddDisabled}
+                                    autoAddCount={autoAddCount}
+                                    matchPattern={matchPattern}
+                                    onMatchPatternChange={setMatchPattern}
+                                    matchPatternInvalid={matchPatternInvalid}
                                 />
                                 <SortSection
                                     members={selectedMembers}

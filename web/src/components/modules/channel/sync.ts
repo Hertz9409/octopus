@@ -235,7 +235,12 @@ export async function syncAllChannels(channels: { channel_id: number; channel_na
             publishProgress({ running: true, total: channels.length, results: [...results] });
         }
     };
-    await Promise.all(Array.from({ length: Math.min(CONCURRENCY, queue.length) }, worker));
-    publishProgress({ running: false, total: channels.length, results: [...results] });
+    // 收尾发布放在 finally: running 是模块级状态, 万一 worker 抛出未预期的错误,
+    // 卡在 true 会让入口按钮永久禁用, 连重开弹窗都恢复不了。
+    try {
+        await Promise.all(Array.from({ length: Math.min(CONCURRENCY, queue.length) }, worker));
+    } finally {
+        publishProgress({ running: false, total: channels.length, results: [...results] });
+    }
     return results;
 }
