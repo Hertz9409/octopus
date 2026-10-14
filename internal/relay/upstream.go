@@ -109,6 +109,8 @@ func sendPassthroughStream(ctx context.Context, format llm.APIFormat, request *h
 	}
 	// 客户端的 Accept 属于库自管头不会透传, 需显式声明才能让上游按 SSE 返回。
 	rawRequest.Header.Set("Accept", "text/event-stream")
+	rawRequest.Header.Set("Cache-Control", "no-cache")
+	rawRequest.Header.Set("Connection", "keep-alive")
 
 	response, err := client.Do(rawRequest)
 	if err != nil {
@@ -246,16 +248,20 @@ func sendPassthroughStream(ctx context.Context, format llm.APIFormat, request *h
 
 // conversionMiddleware 保存跨协议 pipeline 单次调用需要应用和取得的状态。
 type conversionMiddleware struct {
-	pipeline.DummyMiddleware // 提供本次无需处理的其余 pipeline 中间件方法。
-	channel model.Channel // 本轮上游请求使用的渠道配置。
-	format  llm.APIFormat // 上游渠道协议, 用于校验统一响应终态。
-	rawBody []byte        // 上游非流式响应或错误的原始正文。
-	usage   *llm.Usage    // 非流式统一响应中确认的用量。
-	committed bool       // 流式结果已移交消费方, 停止预读拦截并由消费方归还连接。
+	pipeline.DummyMiddleware               // 提供本次无需处理的其余 pipeline 中间件方法。
+	channel                  model.Channel // 本轮上游请求使用的渠道配置。
+	format                   llm.APIFormat // 上游渠道协议, 用于校验统一响应终态。
+	userAgent                string        // 客户端原始 User-Agent, 转换后的请求不保留它, 需在出站请求上重建。
+	rawBody                  []byte        // 上游非流式响应或错误的原始正文。
+	usage                    *llm.Usage    // 非流式统一响应中确认的用量。
+	committed                bool          // 流式结果已移交消费方, 停止预读拦截并由消费方归还连接。
 }
 
-// OnOutboundRawRequest 在转换后的上游请求上应用渠道参数和自定义 Header。
+// OnOutboundRawRequest 在转换后的上游请求上重建客户端 User-Agent, 并应用渠道参数和自定义 Header。
 func (m *conversionMiddleware) OnOutboundRawRequest(_ context.Context, request *httpclient.Request) (*httpclient.Request, error) {
+	if m.userAgent != "" {
+		request.Headers.Set("User-Agent", m.userAgent)
+	}
 	return request, applyChannelConfig(m.channel, request)
 }
 
@@ -317,7 +323,7 @@ func sendConverted(ctx context.Context, format llm.APIFormat, raw *httpclient.Re
 	if err != nil {
 		return nil, err
 	}
-	middleware := &conversionMiddleware{channel: channel, format: outbound.APIFormat()}
+	middleware := &conversionMiddleware{channel: channel, format: outbound.APIFormat(), userAgent: raw.Headers.Get("User-Agent")}
 	// 流式响应要等消费方读完才能归还连接, 故只在提交流式结果那一处移交, 其余出口一律就地归还。
 	if closeIdle != nil {
 		defer func() {
