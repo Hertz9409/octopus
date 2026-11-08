@@ -124,6 +124,29 @@ func Forward(format llm.APIFormat) gin.HandlerFunc {
 			return failures
 		}
 
+		// tried 记录本请求内已耗尽尝试并进入冷却的成员: 同一请求内不再回头重试它,
+		// 保证先按优先级把所有成员各试一遍再考虑重来, 避免渠道多时首个成员的冷却先到期而被反复调用。
+		tried := make(map[int]bool)
+		markTriedOnCooldown := func(currentGroup model.Group, itemID int) bool {
+			if recordRouteFailure(currentGroup, itemID, countFailure(itemID)) {
+				tried[itemID] = true
+				return true
+			}
+			return false
+		}
+		// allMembersTried 判断分组内是否每个成员都已在本请求内试过一轮; 空分组不算。
+		allMembersTried := func(currentGroup model.Group, tried map[int]bool) bool {
+			if len(currentGroup.Items) == 0 {
+				return false
+			}
+			for _, groupItem := range currentGroup.Items {
+				if !tried[groupItem.ID] {
+					return false
+				}
+			}
+			return true
+		}
+
 		// 没有可用成员、或成员指向的授权与渠道缺失时, 无限静默重试会让客户端一直转圈却看不到任何错误。
 		// 给进入轮次之前的等待设总预算, 超预算以明确错误结束请求。
 		waitDeadline := time.Now().Add(preRoundWaitBudget)
@@ -154,8 +177,19 @@ func Forward(format llm.APIFormat) gin.HandlerFunc {
 
 			// 手动模式取人工指定的成员, 故障转移模式按优先级选择未禁用且不在冷却中的成员。
 			// 没有目标时等待重新选择, 期间人工切换渠道, 补齐成员或成员冷却到期即可让请求继续。
-			item := pickGroupItem(group)
+			item := pickGroupItem(group, tried)
 			if item.ID == 0 {
+				// 分组非空且本请求已把每个成员都试过一轮: 仍在预算内就清空已试表再走一轮,
+				// 超预算则以明确错误结束, 避免渠道多、冷却先到期时无限回头重试。
+				if allMembersTried(group, tried) {
+					if time.Now().Before(waitDeadline) {
+						tried = make(map[int]bool)
+						continue
+					}
+					request.markFailed(errNoAvailableMember, "", nil)
+					rejectRequestStatus(c, inbound, errNoAvailableMember, http.StatusServiceUnavailable)
+					return
+				}
 				if !waitForMember(group.RelayConfig.MemberRetryIntervalSeconds) {
 					return
 				}
@@ -167,7 +201,7 @@ func Forward(format llm.APIFormat) gin.HandlerFunc {
 			grant, err := op.ChannelGrantGet(item.ChannelGrantID)
 			if err != nil {
 				// 该成员当前不可用: 计入连续失败以便达到阈值后进入冷却, 避免反复选中同一个坏成员。
-				if recordRouteFailure(group, item.ID, countFailure(item.ID)) {
+				if markTriedOnCooldown(group, item.ID) {
 					continue
 				}
 				// 未达冷却阈值时只归还可能占用的探测名额。
@@ -183,7 +217,7 @@ func Forward(format llm.APIFormat) gin.HandlerFunc {
 			// 成员指向的渠道已被删除时同样等待, 该成员可能很快被改回可用渠道。
 			channel, err := op.ChannelGet(channelModel.ChannelID)
 			if err != nil {
-				if recordRouteFailure(group, item.ID, countFailure(item.ID)) {
+				if markTriedOnCooldown(group, item.ID) {
 					continue
 				}
 				releaseRouteProbe(group, item.ID)
@@ -282,7 +316,7 @@ func Forward(format llm.APIFormat) gin.HandlerFunc {
 				_ = op.ChannelKeyStatsUpdate(channelKey.ID, metrics)
 
 				// 达到总尝试次数时成员进入冷却并立即重新选路, 否则等待后重试。
-				if recordRouteFailure(group, item.ID, countFailure(item.ID)) {
+				if markTriedOnCooldown(group, item.ID) {
 					continue
 				}
 				if !request.wait(ctx, group.RelayConfig.MemberRetryIntervalSeconds) {

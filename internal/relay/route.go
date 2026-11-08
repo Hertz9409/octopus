@@ -64,8 +64,10 @@ func ResetRouteState(groupID int) {
 }
 
 // pickGroupItem 按分组模式选择本轮目标成员, 没有可用成员时返回零值; group.Items 已按 Priority 升序排列。
+// tried 是本请求内已耗尽尝试(已进入冷却)的成员集合: 这些成员即便冷却到期也不再被选中,
+// 从而保证一次请求先按优先级把所有成员各试一遍, 再考虑重来; 跨请求另用 Cooldowns 记录冷却与到期探测。
 // 渠道是否可用不在此判断: 渠道禁用或缺少密钥由调用方发现并作为一轮失败上报, 该成员随即进入冷却而在后续轮次被跳过。
-func pickGroupItem(group model.Group) model.GroupItem {
+func pickGroupItem(group model.Group, tried map[int]bool) model.GroupItem {
 	if group.Mode == model.GroupModeManual {
 		for _, item := range group.Items {
 			if item.ID == group.ActiveItemID {
@@ -85,11 +87,15 @@ func pickGroupItem(group model.Group) model.GroupItem {
 	}
 
 	// 亲和期内沿用当前成员, 不提前探测已恢复的高优先级成员。
-	if route.CurrentItemID != 0 && route.AffinityUntil > now {
+	if route.CurrentItemID != 0 && !tried[route.CurrentItemID] && route.AffinityUntil > now {
 		return itemOf(group, route.CurrentItemID)
 	}
 
 	for _, item := range group.Items {
+		// 本请求内已试过的成员直接跳过, 即便它的冷却已到期: 先把没试过的成员走完。
+		if tried[item.ID] {
+			continue
+		}
 		// 遍历到当前成员说明比它优先级更高的成员都不可选, 沿用当前成员。
 		if item.ID == route.CurrentItemID {
 			break
@@ -111,7 +117,7 @@ func pickGroupItem(group model.Group) model.GroupItem {
 		publishRouteLocked(route)
 		return item
 	}
-	if route.CurrentItemID != 0 {
+	if route.CurrentItemID != 0 && !tried[route.CurrentItemID] {
 		return itemOf(group, route.CurrentItemID)
 	}
 	return model.GroupItem{}
