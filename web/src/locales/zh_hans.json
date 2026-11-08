@@ -166,6 +166,10 @@
             "placeholder": "请输入过滤表达式",
             "hint": "渠道获取模型时与渠道自身的过滤表达式同时生效（AND），留空不过滤"
         },
+        "channelProbe": {
+            "label": "手动渠道探测",
+            "hint": "关闭后渠道页的「检测连通性」按钮会被拒绝；被动流量健康不受影响。仅打上游 /models，不发推理、不消耗 token。"
+        },
         "saved": "已保存",
         "backup": {
             "title": "备份 / 恢复",
@@ -375,6 +379,23 @@
         }
     },
     "channel": {
+        "health": {
+            "check": "检测连通性",
+            "status": {
+                "healthy": "正常",
+                "degraded": "部分异常",
+                "down": "不可用",
+                "unknown": "未知"
+            },
+            "probeSummary": "最近检测 {time} · {latency}ms · 凭据 {ok}/{total}",
+            "noProbe": "尚未手动检测",
+            "trafficSummary": "近 5 分钟：成功 {success} · 失败 {failed}",
+            "noTraffic": "近 5 分钟无真实流量",
+            "toast": {
+                "ok": "渠道连通正常",
+                "failed": "渠道检测未通过"
+            }
+        },
         "card": {
             "requestCount": "请求次数",
             "keyCount": "凭据",

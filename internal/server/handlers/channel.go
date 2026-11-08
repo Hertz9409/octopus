@@ -2,18 +2,16 @@ package handlers
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
-	"path"
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/bestruirui/octopus/internal/model"
 	"github.com/bestruirui/octopus/internal/op"
-	"github.com/bestruirui/octopus/internal/rhttp"
+	"github.com/bestruirui/octopus/internal/probe"
 	"github.com/bestruirui/octopus/internal/server/middleware"
 	"github.com/bestruirui/octopus/internal/server/resp"
 	"github.com/bestruirui/octopus/internal/server/router"
@@ -56,6 +54,10 @@ func init() {
 		AddRoute(
 			router.NewRoute("/fetch-model", http.MethodPost).
 				Handle(fetchModel),
+		).
+		AddRoute(
+			router.NewRoute("/health/check", http.MethodPost).
+				Handle(checkChannelHealth),
 		)
 }
 
@@ -148,11 +150,7 @@ func deleteChannel(c *gin.Context) {
 }
 
 // fetchModel 按提交的渠道配置与凭据拉取上游模型列表, 并按过滤表达式筛选后返回。
-// 同时探测 OpenAI 与 Anthropic 两侧, 谁返回了哪些模型, 就给对应协议位打勾: 协议支持由探测结果决定, 无需用户声明。
-// OpenAI 侧记为 Responses 而不是 Chat: Chat Completions 已被官方标记弃用, 新渠道应默认走 Responses,
-// 仍需 Chat 的渠道由用户在界面上手动勾选。两侧的 /models 地址与认证形态不同, 故必须分别探测:
-// 单协议上游只有一侧会成功, "哪侧成功" 本身就是协议支持的证据。
-// 只有两侧都失败才算失败; 一侧失败属正常情况, 单协议上游本就只有一侧讲得通, 按成功那侧的结果返回。
+// 两侧探测与协议位判定由 probe.ProbeModels 完成; 此处只负责校验入参并叠加渠道与全局过滤。
 func fetchModel(c *gin.Context) {
 	var request model.ChannelFetchModelRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
@@ -171,42 +169,19 @@ func fetchModel(c *gin.Context) {
 		return
 	}
 
-	var httpClient *http.Client
-	var err error
-	switch {
-	case !target.Proxy:
-		httpClient, err = rhttp.Direct()
-	case target.ChannelProxy == "":
-		httpClient, err = rhttp.Proxy()
-	default:
-		httpClient, err = rhttp.New(target.ChannelProxy)
-		// 渠道专用代理的客户端不再共享, 探测完就得关掉空闲连接; 探测收的是未落库的输入, 留着也无从复用。
-		if httpClient != nil {
-			defer httpClient.CloseIdleConnections()
-		}
-	}
+	client, closeClient, err := probe.Client(target)
 	if err != nil {
 		resp.Error(c, http.StatusBadGateway, err.Error())
 		return
 	}
+	if closeClient != nil {
+		defer closeClient()
+	}
 
-	var openaiModels, anthropicModels []string
-	var openaiErr, anthropicErr error
-	var wg sync.WaitGroup
-	wg.Add(2)
-	go func() {
-		defer wg.Done()
-		openaiModels, openaiErr = fetchOpenAIModels(httpClient, ctx, target, request.Key, modelsURL(target.BaseURL, target.OpenAIResponsePath))
-	}()
-	go func() {
-		defer wg.Done()
-		anthropicModels, anthropicErr = fetchAnthropicModels(httpClient, ctx, target, request.Key, modelsURL(target.BaseURL, target.AnthropicMessagePath))
-	}()
-	wg.Wait()
-
-	if openaiErr != nil && anthropicErr != nil {
+	models, err := probe.ProbeModels(ctx, client, target, request.Key)
+	if err != nil {
 		// 上游鉴权失败或地址不通属于调用方配置问题, 按 502 返回并带上上游原文, 便于在界面上直接看到原因。
-		resp.Error(c, http.StatusBadGateway, fmt.Sprintf("openai: %v; anthropic: %v", openaiErr, anthropicErr))
+		resp.Error(c, http.StatusBadGateway, err.Error())
 		return
 	}
 
@@ -250,148 +225,116 @@ func fetchModel(c *gin.Context) {
 		return true, nil
 	}
 
-	// 两侧结果按名称合并成一份有序集合: 同名模型在两侧都出现时, 协议位取并集。
-	// 保持首次出现的顺序, 界面上模型的排列才与上游返回的一致;
-	// 先并入 OpenAI 再并入 Anthropic, 顺序写死而不用 map 遍历, 否则界面上的模型排列会随每次刷新变化。
-	protocolsByModel := make(map[string]model.Protocol, len(openaiModels)+len(anthropicModels))
-	order := make([]string, 0, len(openaiModels)+len(anthropicModels))
-	for _, name := range openaiModels {
-		matched, err := matches(name)
+	// 保持 probe 给出的顺序(先 OpenAI 再 Anthropic), 只剔除未通过过滤的模型。
+	filtered := make([]model.ChannelFetchModel, 0, len(models))
+	for _, upstreamModel := range models {
+		matched, err := matches(upstreamModel.Name)
 		if err != nil {
 			resp.Error(c, http.StatusBadRequest, err.Error())
 			return
 		}
-		if !matched {
-			continue
+		if matched {
+			filtered = append(filtered, upstreamModel)
 		}
-		if _, ok := protocolsByModel[name]; !ok {
-			order = append(order, name)
-		}
-		protocolsByModel[name] |= model.ProtocolOpenAIResponse
 	}
-	for _, name := range anthropicModels {
-		matched, err := matches(name)
-		if err != nil {
-			resp.Error(c, http.StatusBadRequest, err.Error())
-			return
-		}
-		if !matched {
-			continue
-		}
-		if _, ok := protocolsByModel[name]; !ok {
-			order = append(order, name)
-		}
-		protocolsByModel[name] |= model.ProtocolAnthropicMessage
-	}
-
-	models := make([]model.ChannelFetchModel, 0, len(order))
-	for _, name := range order {
-		models = append(models, model.ChannelFetchModel{Name: name, Protocols: protocolsByModel[name]})
-	}
-	resp.Success(c, models)
+	resp.Success(c, filtered)
 }
 
-// modelsURL 取协议请求路径的父级目录, 与地址拼成同级的 /models 地址。
-// 例如 /v1/chat/completions 与 /v1/messages 都得到 /v1/models, /chat/completions 得到 /models。
-func modelsURL(baseURL, protocolPath string) string {
-	parent := path.Dir(strings.TrimRight(protocolPath, "/"))
-	// Anthropic 的 /v1/messages 只有一层, 父级即 /v1; Chat 的 /v1/chat/completions 需要再上一层。
-	if strings.HasSuffix(parent, "/chat") {
-		parent = path.Dir(parent)
+// checkChannelHealth 手动触发一次渠道连通性检测: 对渠道下每个启用且已填密钥的凭据打上游 /models。
+// 只读、不消耗 token, 只证明地址可达与凭据有效, 不代表每个模型都能真正推理。
+// 同一渠道两次检测至少间隔 60 秒, 并可在设置页用全局开关彻底关掉, 避免对上游形成测活压力。
+func checkChannelHealth(c *gin.Context) {
+	var request struct {
+		ID int `json:"id"`
 	}
-	if parent == "." || parent == "/" {
-		parent = ""
+	if err := c.ShouldBindJSON(&request); err != nil || request.ID <= 0 {
+		resp.Error(c, http.StatusBadRequest, resp.ErrInvalidParam)
+		return
 	}
-	return strings.TrimRight(baseURL, "/") + parent + "/models"
-}
+	if enabled, err := op.SettingGetBool(model.SettingKeyChannelProbeEnabled); err == nil && !enabled {
+		resp.Error(c, http.StatusForbidden, "channel probe is disabled in settings")
+		return
+	}
 
-// refer: https://platform.openai.com/docs/api-reference/models/list
-func fetchOpenAIModels(httpClient *http.Client, ctx context.Context, target model.ChannelConfig, key, url string) ([]string, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	channel, err := op.ChannelGet(request.ID)
 	if err != nil {
-		return nil, err
+		resp.Error(c, http.StatusNotFound, err.Error())
+		return
 	}
-	req.Header.Set("Authorization", "Bearer "+key)
-	for _, header := range target.CustomHeader {
-		if header.HeaderKey != "" {
-			req.Header.Set(header.HeaderKey, header.HeaderValue)
-		}
-	}
-
-	response, err := httpClient.Do(req)
+	detail, err := op.ChannelDetailGet(request.ID)
 	if err != nil {
-		return nil, err
-	}
-	result, err := decodeModelList[model.OpenAIModelList](response)
-	if err != nil {
-		return nil, err
+		resp.Error(c, http.StatusNotFound, err.Error())
+		return
 	}
 
-	models := make([]string, 0, len(result.Data))
-	for _, m := range result.Data {
-		models = append(models, m.ID)
+	keys := make([]model.ChannelKeyConfig, 0, len(detail.Keys))
+	for _, channelKey := range detail.Keys {
+		if channelKey.Enabled && strings.TrimSpace(channelKey.Key) != "" {
+			keys = append(keys, channelKey)
+		}
 	}
-	return models, nil
-}
 
-// refer: https://platform.claude.com/docs
-func fetchAnthropicModels(httpClient *http.Client, ctx context.Context, target model.ChannelConfig, key, url string) ([]string, error) {
-	var allModels []string
-	var afterID string
-	for {
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-		if err != nil {
-			return nil, err
-		}
-		req.Header.Set("X-Api-Key", key)
-		req.Header.Set("Anthropic-Version", "2023-06-01")
-		for _, header := range target.CustomHeader {
-			if header.HeaderKey != "" {
-				req.Header.Set(header.HeaderKey, header.HeaderValue)
-			}
-		}
-		if afterID != "" {
-			q := req.URL.Query()
-			q.Set("after_id", afterID)
-			req.URL.RawQuery = q.Encode()
-		}
+	// 原子占用一次探测名额: 冷却未到或该渠道已有探测在途则拒绝, 避免并发请求同时通过检查各探一次。
+	if remain, ok := op.TryBeginProbe(request.ID); !ok {
+		resp.Error(c, http.StatusTooManyRequests, fmt.Sprintf("probe too frequent, retry after %d s", int(remain.Seconds()+0.5)))
+		return
+	}
+	// 正常路径由 RecordChannelProbe 释放占用; 提前返回/异常时由 defer 归还名额。
+	defer op.AbortProbe(request.ID)
 
-		response, err := httpClient.Do(req)
-		if err != nil {
-			return nil, err
+	result := model.ChannelProbeResult{At: time.Now().UnixMilli()}
+	if len(keys) == 0 {
+		result.Error = "no enabled credential with a key"
+	} else if client, closeClient, clientErr := probe.Client(detail.ChannelConfig); clientErr != nil {
+		result.Error = clientErr.Error()
+	} else {
+		if closeClient != nil {
+			defer closeClient()
 		}
-		// 分页时每轮都会新建响应, 必须当轮读完即关; 用 defer 会攒到整个函数返回才释放。
-		result, err := decodeModelList[model.AnthropicModelList](response)
-		if err != nil {
-			return nil, err
-		}
-		for _, m := range result.Data {
-			allModels = append(allModels, m.ID)
-		}
-		if !result.HasMore {
-			break
-		}
-		afterID = result.LastID
-	}
-	return allModels, nil
-}
+		// 探测整体设超时, 单个凭据再按并发上限控制, 避免凭据多时长时间挂住请求。
+		ctx, cancel := context.WithTimeout(c.Request.Context(), 20*time.Second)
+		defer cancel()
 
-// decodeModelList 关闭响应并把响应体解成模型列表; 非 2xx 时按上游错误返回。
-// 两侧解析流程一致, 只有目标结构不同, 故用类型参数收敛; 分页调用要求当轮读完即关, 关闭点放在此处最稳。
-func decodeModelList[T any](response *http.Response) (T, error) {
-	defer response.Body.Close()
-	var result T
-	// 上游报错时响应体常是能被正常解码的 JSON, 若不先拦下, 模型列表会解成空列表并当作成功;
-	// 响应体截断到 512 字节: 部分上游在鉴权失败时返回整页 HTML, 全文带到界面上无用。
-	if response.StatusCode < http.StatusOK || response.StatusCode >= http.StatusMultipleChoices {
-		body, err := io.ReadAll(io.LimitReader(response.Body, 512))
-		if err != nil {
-			return result, fmt.Errorf("upstream %s", response.Status)
+		var (
+			wg         sync.WaitGroup
+			mu         sync.Mutex
+			keysOK     int
+			minLatency int64
+			errs       []string
+		)
+		sem := make(chan struct{}, 4)
+		for _, channelKey := range keys {
+			wg.Add(1)
+			sem <- struct{}{}
+			go func(channelKey model.ChannelKeyConfig) {
+				defer wg.Done()
+				defer func() { <-sem }()
+				start := time.Now()
+				_, probeErr := probe.ProbeModels(ctx, client, detail.ChannelConfig, channelKey.Key)
+				latency := time.Since(start).Milliseconds()
+				mu.Lock()
+				defer mu.Unlock()
+				if probeErr != nil {
+					errs = append(errs, fmt.Sprintf("%s: %v", channelKey.Name, probeErr))
+					return
+				}
+				keysOK++
+				if minLatency == 0 || latency < minLatency {
+					minLatency = latency
+				}
+			}(channelKey)
 		}
-		return result, fmt.Errorf("upstream %s: %s", response.Status, strings.TrimSpace(string(body)))
+		wg.Wait()
+
+		result.KeysTotal = len(keys)
+		result.KeysOK = keysOK
+		result.LatencyMS = minLatency
+		result.OK = keysOK > 0
+		if !result.OK {
+			result.Error = strings.Join(errs, "; ")
+		}
 	}
-	if err := json.NewDecoder(response.Body).Decode(&result); err != nil {
-		return result, err
-	}
-	return result, nil
+
+	op.RecordChannelProbe(request.ID, result)
+	resp.Success(c, op.ChannelHealthSnapshot(request.ID, channel.Enabled))
 }

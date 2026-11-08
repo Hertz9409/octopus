@@ -277,6 +277,10 @@ func ChannelModelStatsUpdate(channelModelID int, metrics model.StatsMetrics) err
 	channelModel.StatsMetrics.Add(metrics)
 	channelModelCache.Set(channelModelID, channelModel)
 	channelModelStatsNeedUpdate[channelModelID] = struct{}{}
+	// 只记录真实转发结果(成功或失败二者其一), 供模型级被动健康使用。
+	if metrics.RequestSuccess > 0 || metrics.RequestFailed > 0 {
+		recordModelTraffic(channelModelID, metrics.RequestSuccess > 0)
+	}
 	return nil
 }
 
@@ -305,6 +309,10 @@ func ChannelStatsUpdate(channelID int, metrics model.StatsMetrics) error {
 	channel.StatsMetrics.Add(metrics)
 	channelCache.Set(channelID, channel)
 	channelStatsNeedUpdate[channelID] = struct{}{}
+	// 只记录真实转发结果(成功或失败二者其一), 供渠道级被动健康使用。
+	if metrics.RequestSuccess > 0 || metrics.RequestFailed > 0 {
+		recordChannelTraffic(channelID, metrics.RequestSuccess > 0)
+	}
 	return nil
 }
 

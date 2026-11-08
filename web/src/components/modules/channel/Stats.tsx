@@ -11,6 +11,7 @@ import {
     FileText,
     MessageSquare,
     Pencil,
+    RefreshCw,
     Share2,
     Trash2,
     X,
@@ -19,9 +20,10 @@ import { snapdom } from '@zumer/snapdom';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useTranslations } from 'use-intl';
-import { type ChannelStatsFormatted, useDeleteChannel } from '@/api/channel';
+import { type ChannelStatsFormatted, useCheckChannelHealth, useDeleteChannel } from '@/api/channel';
 import { type StatsMetricsFormatted } from '@/api/stats';
 import { useMorphingDialog } from '@/components/ui/morphing-dialog';
+import { HealthDot, ModelHealthDot } from './Health';
 
 type FormattedMetric = StatsMetricsFormatted['request_count'];
 
@@ -55,6 +57,8 @@ export function ChannelStats({ channel, onEdit }: {
     const tCommon = useTranslations('common');
     const { setIsOpen } = useMorphingDialog();
     const deleteChannel = useDeleteChannel();
+    const checkChannelHealth = useCheckChannelHealth();
+    const tHealth = useTranslations('channel.health');
     const [modelSort, setModelSort] = useState<ModelSortKey>('count');
     // 隐藏渠道名称, 分享图也跟随此状态
     const [isNameHidden, setIsNameHidden] = useState(false);
@@ -117,6 +121,7 @@ export function ChannelStats({ channel, onEdit }: {
                 rate: successRate(formatted.request_success.raw, formatted.request_failed.raw),
                 count: formatted.request_count,
                 tokens: formatted.total_token,
+                health: channelModel.health,
             };
         });
 
@@ -178,6 +183,21 @@ export function ChannelStats({ channel, onEdit }: {
         link.click();
     };
 
+    // 手动触发连通性检测：成功/失败都以 toast 反馈，明细随健康状态提示在状态点上。
+    const handleCheck = () => {
+        checkChannelHealth.mutate(channel.channel_id, {
+            onSuccess: (health) => {
+                // 以 probe 的真实结果判定提示: 渠道停用时 status 恒为 unknown，但 probe 仍可能连通。
+                if (health.probe?.ok) {
+                    toast.success(tHealth('toast.ok'));
+                } else {
+                    toast.error(tHealth('toast.failed'), { description: health.probe?.error || undefined });
+                }
+            },
+            onError: (error) => toast.error(error.message),
+        });
+    };
+
     return (
         // 撑满弹窗给定的高度, 两列各自拉伸填满; 内容更高时(窄屏堆成一列)继续增长, 由外层滚动。
         // 高度不能写成 @2xl/stats:h-full: 容器查询只能由祖先容器回答, 这里自己声明了 @container/stats, 查不到自己。
@@ -192,7 +212,18 @@ export function ChannelStats({ channel, onEdit }: {
                         <h3 className={`truncate text-xs font-semibold tracking-wider text-muted-foreground ${isNameHidden ? 'select-none blur-[3px]' : ''}`}>
                             {channel.channel_name}
                         </h3>
+                        <HealthDot health={channel.health} />
                         <div data-share-exclude className="flex shrink-0 items-center">
+                            <button
+                                type="button"
+                                onClick={handleCheck}
+                                disabled={checkChannelHealth.isPending}
+                                title={tHealth('check')}
+                                aria-label={tHealth('check')}
+                                className="flex size-6 items-center justify-center rounded-md text-muted-foreground/60 transition-colors hover:text-foreground disabled:opacity-50"
+                            >
+                                <RefreshCw className={cn('size-3.5', checkChannelHealth.isPending && 'animate-spin')} />
+                            </button>
                             <button
                                 type="button"
                                 onClick={() => setIsNameHidden(!isNameHidden)}
@@ -315,7 +346,10 @@ export function ChannelStats({ channel, onEdit }: {
                                     className="grid gap-2 rounded-2xl border bg-card p-3 @md/stats:grid-cols-[minmax(0,1fr)_auto] @md/stats:items-center @md/stats:gap-4"
                                 >
                                     <div className="min-w-0 space-y-1.5">
-                                        <span className="block truncate text-sm font-medium text-card-foreground">{model.name}</span>
+                                        <div className="flex min-w-0 items-center gap-1.5">
+                                            <ModelHealthDot health={model.health} />
+                                            <span className="truncate text-sm font-medium text-card-foreground">{model.name}</span>
+                                        </div>
                                         <div className="flex items-center gap-2">
                                             <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
                                                 <div className="h-full rounded-full bg-primary" style={{ width: `${model.share}%` }} />

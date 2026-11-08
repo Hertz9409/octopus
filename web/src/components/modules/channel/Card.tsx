@@ -10,6 +10,7 @@ import { CheckCircle2, KeyRound, Layers, MessageSquare, XCircle } from 'lucide-r
 import { type ChannelStatsFormatted, useEnableChannel } from '@/api/channel';
 import { usePageActionsStore } from '@/components/common/PageActions';
 import { ChannelStats } from './Stats';
+import { HealthDot } from './Health';
 import { ChannelForm } from './Form';
 import { useTranslations } from 'use-intl';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
@@ -63,14 +64,17 @@ export function Card({ channel }: { channel: ChannelStatsFormatted }) {
                     className="flex flex-col gap-4 rounded-3xl border border-border bg-card text-card-foreground p-4"
                 >
                     <header className="flex items-center justify-between gap-2">
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <h3 className="text-lg font-bold truncate min-w-0">{channel.channel_name}</h3>
-                            </TooltipTrigger>
-                            <TooltipContent key={channel.channel_name} side="top" sideOffset={10} align="center">
-                                {channel.channel_name}
-                            </TooltipContent>
-                        </Tooltip>
+                        <div className="flex min-w-0 items-center gap-2">
+                            <HealthDot health={channel.health} />
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <h3 className="text-lg font-bold truncate min-w-0">{channel.channel_name}</h3>
+                                </TooltipTrigger>
+                                <TooltipContent key={channel.channel_name} side="top" sideOffset={10} align="center">
+                                    {channel.channel_name}
+                                </TooltipContent>
+                            </Tooltip>
+                        </div>
                         <div className="flex shrink-0 items-center gap-1">
                             <Switch
                                 checked={channel.enabled}

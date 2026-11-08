@@ -166,6 +166,10 @@
             "placeholder": "Enter filter regex",
             "hint": "Applied along with the channel's own filter when fetching models (AND); empty means no filter"
         },
+        "channelProbe": {
+            "label": "Manual channel probe",
+            "hint": "When off, the channel \"Check connectivity\" button is rejected; passive traffic health is unaffected. Only calls upstream /models, no inference, no tokens."
+        },
         "saved": "Saved",
         "backup": {
             "title": "Backup / Restore",
@@ -375,6 +379,23 @@
         }
     },
     "channel": {
+        "health": {
+            "check": "Check connectivity",
+            "status": {
+                "healthy": "Healthy",
+                "degraded": "Degraded",
+                "down": "Unavailable",
+                "unknown": "Unknown"
+            },
+            "probeSummary": "Last check {time} · {latency}ms · credentials {ok}/{total}",
+            "noProbe": "Not checked manually yet",
+            "trafficSummary": "Last 5 min: {success} ok · {failed} failed",
+            "noTraffic": "No real traffic in the last 5 minutes",
+            "toast": {
+                "ok": "Channel is reachable",
+                "failed": "Channel check failed"
+            }
+        },
         "card": {
             "requestCount": "Requests",
             "keyCount": "Credentials",

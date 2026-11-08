@@ -40,6 +40,7 @@ func ChannelStatsList() []model.ChannelStats {
 		modelsByChannel[channelModel.ChannelID] = append(modelsByChannel[channelModel.ChannelID], model.ChannelModelStats{
 			ModelID:      channelModel.ID,
 			ModelName:    channelModel.Name,
+			Health:       ModelHealthSnapshot(channelModel.ID),
 			StatsMetrics: channelModel.StatsMetrics,
 		})
 	}
@@ -59,6 +60,7 @@ func ChannelStatsList() []model.ChannelStats {
 			Enabled:      channel.Enabled,
 			KeyCount:     keysByChannel[channel.ID],
 			Models:       models,
+			Health:       ChannelHealthSnapshot(channel.ID, channel.Enabled),
 			StatsMetrics: channel.StatsMetrics,
 		})
 	}
@@ -150,6 +152,8 @@ func ChannelUpdate(detail *model.ChannelDetail, ctx context.Context) (*model.Cha
 	retryCacheRefresh(fmt.Sprintf("channel %d group refresh", detail.ID), func() error {
 		return groupRefreshCache(ctx)
 	})
+	// 模型可能在上面的整体替换中被删除, 按最新模型缓存清掉其健康窗口, 避免条目常驻内存。
+	pruneModelHealth()
 	updated := channelDetail(channel)
 	return &updated, nil
 }
@@ -252,6 +256,13 @@ func ChannelDel(id int, ctx context.Context) error {
 		return fmt.Errorf("channel not found")
 	}
 	grantIDs := channelGrantIDs(id)
+	// 健康状态按渠道与模型主键保存, 删除前先记下模型主键, 事务与缓存清理后再一并丢弃。
+	modelIDs := make([]int, 0)
+	for _, channelModel := range channelModelCache.GetAll() {
+		if channelModel.ChannelID == id {
+			modelIDs = append(modelIDs, channelModel.ID)
+		}
+	}
 	if err := db.GetDB().WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if len(grantIDs) > 0 {
 			if err := clearActiveItems(tx, grantIDs); err != nil {
@@ -290,6 +301,7 @@ func ChannelDel(id int, ctx context.Context) error {
 	channelModelStatsNeedUpdateLock.Unlock()
 
 	channelGrantCache.Del(grantIDs...)
+	deleteChannelHealth(id, modelIDs)
 	if err := groupRefreshCache(ctx); err != nil {
 		return fmt.Errorf("failed to refresh groups: %w", err)
 	}

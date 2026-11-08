@@ -14,6 +14,7 @@ export const SettingKey = {
     StatsSaveInterval: 'stats_save_interval',
     CORSAllowOrigins: 'cors_allow_origins',
     ModelFilter: 'model_filter',
+    ChannelProbeEnabled: 'channel_probe_enabled',
 } as const;
 
 /**

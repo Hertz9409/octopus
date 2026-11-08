@@ -115,14 +115,48 @@ type ChannelStats struct {
 	Enabled      bool                `json:"enabled"`      // 渠道是否可用, 供列表页的开关与过滤使用。
 	KeyCount     int                 `json:"key_count"`    // 该渠道的凭据个数。
 	Models       []ChannelModelStats `json:"models"`       // 该渠道各模型的独立统计, 恒为数组; 长度即渠道的模型个数。
+	Health       *ChannelHealth      `json:"health,omitempty"`
 	StatsMetrics                     // 渠道自身的累计统计。
 }
 
 // 单个渠道模型的累计统计。
 type ChannelModelStats struct {
-	ModelID      int    `json:"model_id"`   // 渠道模型主键。
-	ModelName    string `json:"model_name"` // 上游模型名称。
-	StatsMetrics        // 该模型自身的累计统计。
+	ModelID      int                 `json:"model_id"`   // 渠道模型主键。
+	ModelName    string              `json:"model_name"` // 上游模型名称。
+	Health       *ChannelModelHealth `json:"health,omitempty"`
+	StatsMetrics                     // 该模型自身的累计统计。
+}
+
+// 渠道健康状态: 手动连通性探测优先(距上次探测 5 分钟内), 其次被动真实流量; 两者都无信号时整块省略。
+// 口径提醒: 探测打的是上游 /models, 只证明地址可达与凭据有效, 不代表每个模型都能真正推理。
+type ChannelHealth struct {
+	Status  string              `json:"status"`  // healthy / degraded / down / unknown。
+	Probe   *ChannelProbeResult `json:"probe"`   // 最近一次手动连通性探测, 从未探测过为 nil。
+	Traffic ChannelTraffic      `json:"traffic"` // 最近 5 分钟被动真实流量。
+}
+
+// 一次手动连通性探测的结果, 由渠道下全部启用凭据并发探测汇总得出。
+type ChannelProbeResult struct {
+	OK        bool   `json:"ok"`         // 是否至少有一个凭据连通。
+	At        int64  `json:"at"`         // 探测完成时间, Unix 毫秒。
+	LatencyMS int64  `json:"latency_ms"` // 成功凭据中的最小往返耗时, 毫秒; 全部失败为 0。
+	Error     string `json:"error"`      // 全部失败时的错误摘要, 成功时为空。
+	KeysOK    int    `json:"keys_ok"`    // 连通成功的凭据数。
+	KeysTotal int    `json:"keys_total"` // 参与探测的凭据数。
+}
+
+// 一段窗口内的被动真实流量统计; 只统计真实转发结果, 不额外请求上游。
+type ChannelTraffic struct {
+	Success    int64 `json:"success"`      // 窗口内成功次数。
+	Failure    int64 `json:"failure"`      // 窗口内失败次数。
+	LastOKAt   int64 `json:"last_ok_at"`   // 最近一次成功时间, Unix 毫秒, 0 表示无。
+	LastFailAt int64 `json:"last_fail_at"` // 最近一次失败时间, Unix 毫秒, 0 表示无。
+}
+
+// 模型级健康状态, 仅来自真实流量, 因此空闲模型没有状态。
+type ChannelModelHealth struct {
+	Status  string         `json:"status"`  // healthy / degraded / down / unknown。
+	Traffic ChannelTraffic `json:"traffic"` // 最近 5 分钟被动真实流量。
 }
 
 // 供分组页选取的一条候选授权, 字段与分组成员的展示字段一一对应。

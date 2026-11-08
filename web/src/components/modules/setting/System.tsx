@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslations } from 'use-intl';
-import { Monitor, Globe, Clock, Shield, Filter, HelpCircle, X } from 'lucide-react';
+import { Monitor, Globe, Clock, Shield, Filter, HelpCircle, X, Activity } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useSettingList, useSetSetting, SettingKey } from '@/api/setting';
 import { toast } from 'sonner';
@@ -17,11 +18,13 @@ export function SettingSystem() {
     const [corsAllowOrigins, setCorsAllowOrigins] = useState('');
     const [corsInputValue, setCorsInputValue] = useState('');
     const [modelFilter, setModelFilter] = useState('');
+    const [channelProbeEnabled, setChannelProbeEnabled] = useState(true);
 
     const initialProxyUrl = useRef('');
     const initialStatsSaveInterval = useRef('');
     const initialCorsAllowOrigins = useRef('');
     const initialModelFilter = useRef('');
+    const initialChannelProbeEnabled = useRef(true);
 
     useEffect(() => {
         if (settings) {
@@ -29,6 +32,7 @@ export function SettingSystem() {
             const interval = settings.find(s => s.key === SettingKey.StatsSaveInterval);
             const cors = settings.find(s => s.key === SettingKey.CORSAllowOrigins);
             const modelFilterSetting = settings.find(s => s.key === SettingKey.ModelFilter);
+            const probeSetting = settings.find(s => s.key === SettingKey.ChannelProbeEnabled);
             if (proxy) {
                 queueMicrotask(() => setProxyUrl(proxy.value));
                 initialProxyUrl.current = proxy.value;
@@ -45,6 +49,11 @@ export function SettingSystem() {
                 queueMicrotask(() => setModelFilter(modelFilterSetting.value));
                 initialModelFilter.current = modelFilterSetting.value;
             }
+            if (probeSetting) {
+                const enabled = probeSetting.value !== 'false';
+                queueMicrotask(() => setChannelProbeEnabled(enabled));
+                initialChannelProbeEnabled.current = enabled;
+            }
         }
     }, [settings]);
 
@@ -57,6 +66,7 @@ export function SettingSystem() {
             else if (key === SettingKey.StatsSaveInterval) setStatsSaveInterval(initialStatsSaveInterval.current);
             else if (key === SettingKey.CORSAllowOrigins) setCorsAllowOrigins(initialCorsAllowOrigins.current);
             else if (key === SettingKey.ModelFilter) setModelFilter(initialModelFilter.current);
+            else if (key === SettingKey.ChannelProbeEnabled) setChannelProbeEnabled(initialChannelProbeEnabled.current);
         };
 
         setSetting.mutate({ key, value }, {
@@ -70,6 +80,8 @@ export function SettingSystem() {
                     initialCorsAllowOrigins.current = value;
                 } else if (key === SettingKey.ModelFilter) {
                     initialModelFilter.current = value;
+                } else if (key === SettingKey.ChannelProbeEnabled) {
+                    initialChannelProbeEnabled.current = value !== 'false';
                 }
             },
             onError: revert,
@@ -188,6 +200,29 @@ export function SettingSystem() {
                     onBlur={() => handleSave('model_filter', modelFilter, initialModelFilter.current)}
                     placeholder={t('modelFilter.placeholder')}
                     className="w-48 rounded-xl"
+                />
+            </div>
+
+            {/* 手动渠道探测开关 */}
+            <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                    <Activity className="h-5 w-5 text-muted-foreground" />
+                    <span className="text-sm font-medium">{t('channelProbe.label')}</span>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <HelpCircle className="size-4 text-muted-foreground cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent side="top" sideOffset={10} align="center" className="max-w-64">
+                            {t('channelProbe.hint')}
+                        </TooltipContent>
+                    </Tooltip>
+                </div>
+                <Switch
+                    checked={channelProbeEnabled}
+                    onCheckedChange={(checked) => {
+                        setChannelProbeEnabled(checked);
+                        handleSave(SettingKey.ChannelProbeEnabled, checked ? 'true' : 'false', initialChannelProbeEnabled.current ? 'true' : 'false');
+                    }}
                 />
             </div>
 

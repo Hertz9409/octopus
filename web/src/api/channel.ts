@@ -75,10 +75,42 @@ export type ChannelDetail = {
     match_regex: string;
 };
 
+// ChannelTraffic 是一段窗口内的被动真实流量统计；只来自真实转发结果，不额外请求上游。
+export type ChannelTraffic = {
+    success: number;
+    failure: number;
+    last_ok_at: number; // Unix 毫秒，0 表示窗口内无。
+    last_fail_at: number;
+};
+
+// ChannelProbeResult 是一次手动连通性探测的结果，由渠道下全部启用凭据并发探测汇总。
+export type ChannelProbeResult = {
+    ok: boolean;
+    at: number; // 探测完成时间，Unix 毫秒。
+    latency_ms: number;
+    error: string;
+    keys_ok: number;
+    keys_total: number;
+};
+
+// ChannelHealth 是渠道健康状态：5 分钟内的手动探测优先，其次被动流量。
+export type ChannelHealth = {
+    status: 'healthy' | 'degraded' | 'down' | 'unknown';
+    probe: ChannelProbeResult | null;
+    traffic: ChannelTraffic;
+};
+
+// ChannelModelHealth 是模型级被动健康，仅来自真实流量。
+export type ChannelModelHealth = {
+    status: 'healthy' | 'degraded' | 'down' | 'unknown';
+    traffic: ChannelTraffic;
+};
+
 // ChannelModelStats 是单个渠道模型的累计统计，自带名称。
 export type ChannelModelStats = StatsMetrics & {
     model_id: number;
     model_name: string;
+    health?: ChannelModelHealth | null;
 };
 
 // ChannelStats 是单个渠道及其模型的累计统计，自带名称与启停状态。
@@ -90,6 +122,7 @@ export type ChannelStats = StatsMetrics & {
     enabled: boolean;
     key_count: number;
     models: ChannelModelStats[];
+    health?: ChannelHealth | null;
 };
 
 // ChannelModelStatsFormatted 是单个渠道模型的展示用统计。
@@ -97,6 +130,7 @@ export type ChannelModelStatsFormatted = {
     model_id: number;
     model_name: string;
     formatted: StatsMetricsFormatted;
+    health?: ChannelModelHealth | null;
 };
 
 // ChannelStatsFormatted 是单个渠道及其模型的展示用统计，同时充当渠道列表项。
@@ -109,6 +143,7 @@ export type ChannelStatsFormatted = {
     key_count: number;
     models: ChannelModelStatsFormatted[];
     formatted: StatsMetricsFormatted;
+    health?: ChannelHealth | null;
 };
 
 // FetchModelRequest 按指定凭据试拉上游模型列表。
@@ -153,8 +188,10 @@ const channelStatsFormattedQueryOptions = queryOptions({
             model_id: channelModel.model_id,
             model_name: channelModel.model_name,
             formatted: formatStatsMetrics(channelModel),
+            health: channelModel.health,
         })),
         formatted: formatStatsMetrics(item),
+        health: item.health,
     })),
     refetchInterval: 30000,
     refetchOnMount: 'always',
@@ -301,5 +338,27 @@ export function useFetchModel() {
         meta: { errorToast: false },
         mutationFn: (data: FetchModelRequest) =>
             apiRequest<FetchModel[]>('/api/v1/channel/fetch-model', { method: 'POST', body: data }),
+    });
+}
+
+/**
+ * 手动触发一次渠道连通性检测 Hook：对渠道下每个启用且已填密钥的凭据打上游 /models。
+ * 只读、不消耗 token；同一渠道两次检测至少间隔 60 秒，失败/过频由调用方提示。
+ *
+ * @example
+ * const check = useCheckChannelHealth();
+ * check.mutate(1); // 检测 ID 为 1 的渠道
+ */
+export function useCheckChannelHealth() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        // 调用方自行捕获并提示错误，声明关闭全局兜底提示避免重复。
+        meta: { errorToast: false },
+        mutationFn: (id: number) =>
+            apiRequest<ChannelHealth>('/api/v1/channel/health/check', { method: 'POST', body: { id } }),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['channels'] });
+        },
     });
 }

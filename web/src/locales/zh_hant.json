@@ -166,6 +166,10 @@
             "placeholder": "請輸入過濾表達式",
             "hint": "渠道獲取模型時與渠道自身的過濾表達式同時生效（AND），留空不過濾"
         },
+        "channelProbe": {
+            "label": "手動供應源探測",
+            "hint": "關閉後供應源頁的「檢測連通性」按鈕會被拒絕；被動流量健康不受影響。僅打上游 /models，不發推理、不消耗 token。"
+        },
         "saved": "已儲存",
         "backup": {
             "title": "備份 / 復原",
@@ -375,6 +379,23 @@
         }
     },
     "channel": {
+        "health": {
+            "check": "檢測連通性",
+            "status": {
+                "healthy": "正常",
+                "degraded": "部分異常",
+                "down": "不可用",
+                "unknown": "未知"
+            },
+            "probeSummary": "最近檢測 {time} · {latency}ms · 憑證 {ok}/{total}",
+            "noProbe": "尚未手動檢測",
+            "trafficSummary": "近 5 分鐘：成功 {success} · 失敗 {failed}",
+            "noTraffic": "近 5 分鐘無真實流量",
+            "toast": {
+                "ok": "供應源連通正常",
+                "failed": "供應源檢測未通過"
+            }
+        },
         "card": {
             "requestCount": "請求次數",
             "keyCount": "憑證",

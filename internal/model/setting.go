@@ -15,6 +15,7 @@ const (
 	SettingKeyStatsSaveInterval       SettingKey = "stats_save_interval"        // 将统计信息写入数据库的周期(分钟)
 	SettingKeyCORSAllowOrigins        SettingKey = "cors_allow_origins"         // 跨域白名单(逗号分隔, 如 "example.com,example2.com"). 为空不允许跨域, "*"允许所有
 	SettingKeyModelFilter             SettingKey = "model_filter"              // 渠道获取模型时的全局过滤表达式; 留空表示不过滤
+	SettingKeyChannelProbeEnabled     SettingKey = "channel_probe_enabled"     // 是否允许手动渠道连通性探测; 关闭后 /channel/health/check 直接拒绝
 	SettingKeyJWTSecret               SettingKey = "jwt_secret"               // 会话签名密钥, 首次启动随机生成; 改密时轮换使旧会话失效
 )
 
@@ -29,6 +30,7 @@ func DefaultSettings() []Setting {
 		{Key: SettingKeyStatsSaveInterval, Value: "10"},       // 默认10分钟保存一次统计信息
 		{Key: SettingKeyCORSAllowOrigins, Value: ""},          // CORS 默认不允许跨域，设置为 "*" 才允许所有来源
 		{Key: SettingKeyModelFilter, Value: ""},               // 默认不过滤模型
+		{Key: SettingKeyChannelProbeEnabled, Value: "true"},   // 默认允许手动探测; 关闭后仅保留被动流量健康
 		{Key: SettingKeyJWTSecret, Value: ""},                 // 空值表示首次启动时随机生成并落库
 	}
 }
@@ -42,6 +44,11 @@ func (s *Setting) Validate() error {
 		}
 		if minutes <= 0 {
 			return fmt.Errorf("stats save interval must be greater than 0")
+		}
+		return nil
+	case SettingKeyChannelProbeEnabled:
+		if _, err := strconv.ParseBool(s.Value); err != nil {
+			return fmt.Errorf("channel probe enabled must be a boolean")
 		}
 		return nil
 	case SettingKeyModelFilter:
